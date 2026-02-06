@@ -1,117 +1,101 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
-export default function SetTimeScreen({ navigation }) {
+export default function SetTimeScreen({ navigation, route }) {
   const [time, setTime] = useState(new Date());
-  const [selectedDays, setSelectedDays] = useState([]);
+  const [showPicker, setShowPicker] = useState(false);
+  const [selectedDays, setSelectedDays] = useState(['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
 
-  const days = [
-    { short: 'M', full: 'Mon' },
-    { short: 'T', full: 'Tue' },
-    { short: 'W', full: 'Wed' },
-    { short: 'T', full: 'Thu' },
-    { short: 'F', full: 'Fri' },
-    { short: 'S', full: 'Sat' },
-    { short: 'S', full: 'Sun' },
-  ];
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-  const toggleDay = (index) => {
-    if (selectedDays.includes(index)) {
-      setSelectedDays(selectedDays.filter(d => d !== index));
+  const toggleDay = (day) => {
+    if (selectedDays.includes(day)) {
+      setSelectedDays(selectedDays.filter(d => d !== day));
     } else {
-      setSelectedDays([...selectedDays, index]);
+      setSelectedDays([...selectedDays, day]);
     }
   };
 
   const formatTime = (date) => {
-    const hours = date.getHours();
-    const minutes = date.getMinutes();
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    const displayHours = hours % 12 || 12;
-    const displayMinutes = minutes < 10 ? `0${minutes}` : minutes;
-    return { hours: displayHours, minutes: displayMinutes, ampm };
+    return date.toLocaleTimeString('en-US', { 
+      hour: 'numeric', 
+      minute: '2-digit',
+      hour12: true 
+    });
   };
 
-  const timeDisplay = formatTime(time);
-
   return (
-    <LinearGradient
-      colors={['#0a0e27', '#1a1f3a', '#2a2f4a']}
-      style={styles.container}
-    >
+    <LinearGradient colors={['#0a0e27', '#1a1f3a', '#2a2f4a']} style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.backButton}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.stepIndicator}>Step 1 of 3</Text>
+        <Text style={styles.stepIndicator}>Step 1 of 4</Text>
       </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-        <Text style={styles.title}>When do you{'\n'}want to wake?</Text>
-        
-        {/* Large Time Display */}
-        <View style={styles.timeDisplayContainer}>
-          <View style={styles.timeDisplay}>
-            <Text style={styles.timeNumber}>{timeDisplay.hours}</Text>
-            <Text style={styles.timeSeparator}>:</Text>
-            <Text style={styles.timeNumber}>{timeDisplay.minutes}</Text>
-            <Text style={styles.timeAmPm}>{timeDisplay.ampm}</Text>
-          </View>
-          <View style={styles.glowEffect} />
-        </View>
+      <ScrollView style={styles.content}>
+        <Text style={styles.title}>What time do you{'\n'}need to wake up?</Text>
 
-        {/* iOS Time Picker */}
-        <DateTimePicker
-          value={time}
-          mode="time"
-          display="spinner"
-          onChange={(event, selectedTime) => {
-            if (selectedTime) setTime(selectedTime);
-          }}
-          textColor="#ffffff"
-          style={styles.picker}
-        />
+        {/* Time Display */}
+        <TouchableOpacity 
+          style={styles.timeDisplay}
+          onPress={() => setShowPicker(true)}
+        >
+          <Text style={styles.timeText}>{formatTime(time)}</Text>
+          <Text style={styles.timeLabel}>Tap to change</Text>
+        </TouchableOpacity>
 
-        {/* Days Selector */}
-        <View style={styles.daysSection}>
-          <Text style={styles.daysLabel}>Repeat on</Text>
-          <View style={styles.daysContainer}>
-            {days.map((day, index) => (
-              <TouchableOpacity
-                key={index}
-                style={[
-                  styles.dayButton,
-                  selectedDays.includes(index) && styles.dayButtonActive
-                ]}
-                onPress={() => toggleDay(index)}
-              >
-                <Text style={[
-                  styles.dayText,
-                  selectedDays.includes(index) && styles.dayTextActive
-                ]}>
-                  {day.short}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+        {showPicker && (
+          <DateTimePicker
+            value={time}
+            mode="time"
+            display="spinner"
+            onChange={(event, selectedTime) => {
+              setShowPicker(Platform.OS === 'ios');
+              if (selectedTime) {
+                setTime(selectedTime);
+              }
+            }}
+          />
+        )}
+
+        {/* Days */}
+        <Text style={styles.sectionLabel}>Repeat on</Text>
+        <View style={styles.daysContainer}>
+          {days.map((day) => (
+            <TouchableOpacity
+              key={day}
+              style={[
+                styles.dayPill,
+                selectedDays.includes(day) && styles.dayPillActive
+              ]}
+              onPress={() => toggleDay(day)}
+            >
+              <Text style={[
+                styles.dayText,
+                selectedDays.includes(day) && styles.dayTextActive
+              ]}>
+                {day}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </ScrollView>
 
       {/* Next Button */}
-      <TouchableOpacity 
-        style={[styles.nextButton, selectedDays.length === 0 && styles.nextButtonDisabled]}
+      <TouchableOpacity
+        style={styles.nextButton}
         onPress={() => {
-          if (selectedDays.length > 0) {
-            navigation.navigate('Reason', { time, days: selectedDays });
-          }
+          navigation.navigate('Reason', {
+            time: formatTime(time), // Pass as STRING, not Date object
+            days: selectedDays,
+          });
         }}
-        activeOpacity={0.9}
-        disabled={selectedDays.length === 0}
       >
         <LinearGradient
-          colors={selectedDays.length > 0 ? ['#4158D0', '#C850C0'] : ['#555', '#666']}
+          colors={['#4158D0', '#C850C0']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.nextGradient}
@@ -125,9 +109,7 @@ export default function SetTimeScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -136,11 +118,7 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 20,
   },
-  backButton: {
-    fontSize: 32,
-    color: '#ffffff',
-    fontWeight: '300',
-  },
+  backButton: { fontSize: 32, color: '#ffffff' },
   stepIndicator: {
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.5)',
@@ -148,100 +126,65 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-  },
-  contentContainer: {
     paddingHorizontal: 30,
   },
   title: {
-    fontSize: 42,
+    fontSize: 36,
     fontWeight: '700',
     color: '#ffffff',
     marginBottom: 40,
-    lineHeight: 50,
-    letterSpacing: -1,
-  },
-  timeDisplayContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
-    position: 'relative',
+    lineHeight: 44,
   },
   timeDisplay: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    backgroundColor: 'rgba(65, 88, 208, 0.15)',
-    paddingVertical: 20,
-    paddingHorizontal: 40,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(65, 88, 208, 0.3)',
-  },
-  glowEffect: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: 24,
-    backgroundColor: 'rgba(65, 88, 208, 0.2)',
-    shadowColor: '#4158D0',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-    zIndex: -1,
-  },
-  timeNumber: {
-    fontSize: 72,
-    fontWeight: '700',
-    color: '#ffffff',
-    letterSpacing: -2,
-  },
-  timeSeparator: {
-    fontSize: 72,
-    fontWeight: '300',
-    color: 'rgba(255, 255, 255, 0.5)',
-    marginHorizontal: 5,
-  },
-  timeAmPm: {
-    fontSize: 28,
-    fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.7)',
-    marginLeft: 10,
-  },
-  picker: {
-    height: 150,
-  },
-  daysSection: {
-    marginTop: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 20,
+    padding: 40,
+    alignItems: 'center',
     marginBottom: 40,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
-  daysLabel: {
-    fontSize: 18,
+  timeText: {
+    fontSize: 56,
+    fontWeight: '900',
+    color: '#ffffff',
+    marginBottom: 8,
+  },
+  timeLabel: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.5)',
+    fontWeight: '500',
+  },
+  sectionLabel: {
+    fontSize: 16,
     color: 'rgba(255, 255, 255, 0.7)',
-    marginBottom: 16,
     fontWeight: '600',
+    marginBottom: 16,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   daysContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 40,
   },
-  dayButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
+  dayPill: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
-  dayButtonActive: {
-    backgroundColor: '#4158D0',
+  dayPillActive: {
+    backgroundColor: 'rgba(65, 88, 208, 0.2)',
     borderColor: '#4158D0',
   },
   dayText: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.6)',
     fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.5)',
   },
   dayTextActive: {
     color: '#ffffff',
@@ -251,14 +194,6 @@ const styles = StyleSheet.create({
     marginBottom: 50,
     borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#4158D0',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  nextButtonDisabled: {
-    shadowOpacity: 0,
   },
   nextGradient: {
     flexDirection: 'row',
@@ -275,6 +210,5 @@ const styles = StyleSheet.create({
   nextArrow: {
     fontSize: 24,
     color: '#ffffff',
-    fontWeight: '300',
   },
 });

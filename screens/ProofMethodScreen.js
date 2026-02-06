@@ -6,130 +6,65 @@ export default function ProofMethodScreen({ navigation, route }) {
   const [selectedMethod, setSelectedMethod] = useState('steps');
 
   const methods = [
-    {
-      id: 'steps',
-      icon: '👟',
-      title: 'Walk 30 Steps',
-      subtitle: 'Uses motion sensors only',
-      description: 'Your phone tracks movement to confirm you\'re up and walking',
-      features: ['No camera required', 'Privacy-first', 'Works anywhere'],
-      default: true,
-    },
-    {
-      id: 'camera',
-      icon: '📸',
-      title: 'Camera Movement',
-      subtitle: 'On-device only, not saved',
-      description: 'Complete simple physical tasks like jumping jacks',
-      features: ['Processed locally', 'Never stored', 'More engaging'],
-      default: false,
-    },
+    { id: 'steps', icon: '👟', name: 'Walk Steps', desc: 'Take 30 steps' },
+    { id: 'camera', icon: '📸', name: 'Hand Wave', desc: 'Wave at camera' },
   ];
 
   return (
-    <LinearGradient
-      colors={['#0a0e27', '#1a1f3a', '#2a2f4a']}
-      style={styles.container}
-    >
+    <LinearGradient colors={['#0a0e27', '#1a1f3a', '#2a2f4a']} style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.backButton}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.stepIndicator}>Step 3 of 3</Text>
+        <Text style={styles.stepIndicator}>Step 3 of 4</Text>
       </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-        <Text style={styles.title}>How will you{'\n'}prove it?</Text>
-        
-        <Text style={styles.subtitle}>
-          Choose how the alarm confirms you're awake
-        </Text>
+      <ScrollView style={styles.content}>
+        <Text style={styles.title}>How do you want{'\n'}to prove you're awake?</Text>
 
-        {/* Method Cards */}
-        <View style={styles.methodsContainer}>
-          {methods.map((method) => (
-            <TouchableOpacity
-              key={method.id}
+        {methods.map((method) => (
+          <TouchableOpacity
+            key={method.id}
+            style={[
+              styles.methodCard,
+              selectedMethod === method.id && styles.methodCardActive,
+            ]}
+            onPress={() => setSelectedMethod(method.id)}
+          >
+            <Text style={styles.methodIcon}>{method.icon}</Text>
+            <View style={styles.methodInfo}>
+              <Text style={styles.methodName}>{method.name}</Text>
+              <Text style={styles.methodDesc}>{method.desc}</Text>
+            </View>
+            <View
               style={[
-                styles.methodCard,
-                selectedMethod === method.id && styles.methodCardActive
+                styles.radio,
+                selectedMethod === method.id && styles.radioActive,
               ]}
-              onPress={() => setSelectedMethod(method.id)}
-              activeOpacity={0.9}
-            >
-              <View style={styles.methodHeader}>
-                <View style={styles.methodIconContainer}>
-                  <Text style={styles.methodIcon}>{method.icon}</Text>
-                </View>
-                <View style={styles.methodHeaderText}>
-                  <View style={styles.methodTitleRow}>
-                    <Text style={styles.methodTitle}>{method.title}</Text>
-                    {method.default && (
-                      <View style={styles.defaultBadge}>
-                        <Text style={styles.defaultBadgeText}>DEFAULT</Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text style={styles.methodSubtitle}>{method.subtitle}</Text>
-                </View>
-              </View>
-
-              <Text style={styles.methodDescription}>{method.description}</Text>
-
-              <View style={styles.featuresContainer}>
-                {method.features.map((feature, index) => (
-                  <View key={index} style={styles.featureRow}>
-                    <Text style={styles.featureCheck}>✓</Text>
-                    <Text style={styles.featureText}>{feature}</Text>
-                  </View>
-                ))}
-              </View>
-
-              {selectedMethod === method.id && (
-                <View style={styles.selectedIndicator}>
-                  <LinearGradient
-                    colors={['#4158D0', '#C850C0']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.selectedGradient}
-                  >
-                    <Text style={styles.selectedText}>✓ Selected</Text>
-                  </LinearGradient>
-                </View>
-              )}
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Info Box */}
-        <View style={styles.infoBox}>
-          <Text style={styles.infoIcon}>ℹ️</Text>
-          <Text style={styles.infoText}>
-            You'll complete this task 3 times: once immediately, then twice more at 5-minute intervals to confirm you stay awake.
-          </Text>
-        </View>
+            />
+          </TouchableOpacity>
+        ))}
       </ScrollView>
 
-      {/* Activate Button */}
-      <TouchableOpacity 
-        style={styles.activateButton}
+      <TouchableOpacity
+        style={styles.nextButton}
         onPress={() => {
-          navigation.navigate('AlarmRinging', {
-            ...route.params,
+          console.log('✅ Navigating to AlarmSet with proofMethod:', selectedMethod);
+          navigation.navigate('AlarmSet', { 
+            ...route.params, 
             proofMethod: selectedMethod,
-            round: 1,
+            round: 1, // Start at round 1
           });
         }}
-        activeOpacity={0.9}
       >
         <LinearGradient
           colors={['#4158D0', '#C850C0']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
-          style={styles.activateGradient}
+          style={styles.nextGradient}
         >
-          <Text style={styles.activateText}>Activate Alarm</Text>
-          <Text style={styles.activateIcon}>⚡</Text>
+          <Text style={styles.nextText}>Continue</Text>
+          <Text style={styles.nextArrow}>→</Text>
         </LinearGradient>
       </TouchableOpacity>
     </LinearGradient>
@@ -137,9 +72,7 @@ export default function ProofMethodScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -151,7 +84,6 @@ const styles = StyleSheet.create({
   backButton: {
     fontSize: 32,
     color: '#ffffff',
-    fontWeight: '300',
   },
   stepIndicator: {
     fontSize: 14,
@@ -160,33 +92,22 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-  },
-  contentContainer: {
     paddingHorizontal: 30,
-    paddingBottom: 120,
   },
   title: {
-    fontSize: 42,
+    fontSize: 36,
     fontWeight: '700',
     color: '#ffffff',
-    marginBottom: 12,
-    lineHeight: 50,
-    letterSpacing: -1,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.6)',
-    marginBottom: 32,
-    lineHeight: 24,
-  },
-  methodsContainer: {
-    gap: 20,
+    marginBottom: 30,
+    lineHeight: 44,
   },
   methodCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 20,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 16,
     padding: 20,
     marginBottom: 16,
   },
@@ -194,139 +115,54 @@ const styles = StyleSheet.create({
     borderColor: '#4158D0',
     backgroundColor: 'rgba(65, 88, 208, 0.1)',
   },
-  methodHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-  },
-  methodIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
   methodIcon: {
-    fontSize: 28,
+    fontSize: 48,
+    marginRight: 20,
   },
-  methodHeaderText: {
+  methodInfo: {
     flex: 1,
   },
-  methodTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
+  methodName: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#ffffff',
     marginBottom: 4,
   },
-  methodTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#ffffff',
-  },
-  defaultBadge: {
-    backgroundColor: 'rgba(65, 88, 208, 0.3)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  defaultBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#4158D0',
-    letterSpacing: 0.5,
-  },
-  methodSubtitle: {
+  methodDesc: {
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.6)',
-    fontWeight: '500',
   },
-  methodDescription: {
-    fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.8)',
-    lineHeight: 22,
-    marginBottom: 16,
-  },
-  featuresContainer: {
-    gap: 8,
-  },
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  featureCheck: {
-    fontSize: 16,
-    color: '#4158D0',
-    marginRight: 10,
-    fontWeight: '700',
-  },
-  featureText: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontWeight: '500',
-  },
-  selectedIndicator: {
-    marginTop: 16,
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  selectedGradient: {
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  selectedText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#ffffff',
-    letterSpacing: 0.5,
-  },
-  infoBox: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(200, 80, 192, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(200, 80, 192, 0.3)',
+  radio: {
+    width: 24,
+    height: 24,
     borderRadius: 12,
-    padding: 16,
-    marginTop: 24,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
-  infoIcon: {
-    fontSize: 20,
-    marginRight: 12,
+  radioActive: {
+    borderColor: '#4158D0',
+    backgroundColor: '#4158D0',
   },
-  infoText: {
-    flex: 1,
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
-    lineHeight: 20,
-  },
-  activateButton: {
-    position: 'absolute',
-    bottom: 50,
-    left: 30,
-    right: 30,
+  nextButton: {
+    marginHorizontal: 30,
+    marginBottom: 50,
     borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#4158D0',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 12,
   },
-  activateGradient: {
+  nextGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 20,
   },
-  activateText: {
+  nextText: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#ffffff',
     marginRight: 10,
-    letterSpacing: 0.5,
   },
-  activateIcon: {
+  nextArrow: {
     fontSize: 24,
+    color: '#ffffff',
   },
 });

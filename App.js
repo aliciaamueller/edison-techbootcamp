@@ -5,6 +5,7 @@ import WelcomeScreen from './screens/WelcomeScreen';
 import SetTimeScreen from './screens/SetTimeScreen';
 import ReasonScreen from './screens/ReasonScreen';
 import ProofMethodScreen from './screens/ProofMethodScreen';
+import AlarmSetScreen from './screens/AlarmSetScreen';
 import AlarmRingingScreen from './screens/AlarmRingingScreen';
 import ProofTaskScreen from './screens/ProofTaskScreen';
 import RoundCompleteScreen from './screens/RoundCompleteScreen';
@@ -16,16 +17,14 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator 
-        screenOptions={{
-          headerShown: false,
-          animation: 'fade',
-          contentStyle: { backgroundColor: '#0a0e27' }
-        }}
+        initialRouteName="Welcome"
+        screenOptions={{ headerShown: false }}
       >
         <Stack.Screen name="Welcome" component={WelcomeScreen} />
         <Stack.Screen name="SetTime" component={SetTimeScreen} />
         <Stack.Screen name="Reason" component={ReasonScreen} />
         <Stack.Screen name="ProofMethod" component={ProofMethodScreen} />
+        <Stack.Screen name="AlarmSet" component={AlarmSetScreen} />
         <Stack.Screen name="AlarmRinging" component={AlarmRingingScreen} />
         <Stack.Screen name="ProofTask" component={ProofTaskScreen} />
         <Stack.Screen name="RoundComplete" component={RoundCompleteScreen} />
