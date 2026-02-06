@@ -1,19 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function RoundCompleteScreen({ navigation, route }) {
   const { round } = route.params;
-  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
-  const [progressAnim] = useState(new Animated.Value(0));
+  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes
 
   useEffect(() => {
-    // Countdown timer
     const timer = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(timer);
-          // Move to next round
           navigation.navigate('AlarmRinging', {
             ...route.params,
             round: round + 1,
@@ -24,13 +22,6 @@ export default function RoundCompleteScreen({ navigation, route }) {
       });
     }, 1000);
 
-    // Animate progress ring
-    Animated.timing(progressAnim, {
-      toValue: 1,
-      duration: 300000, // 5 minutes
-      useNativeDriver: false,
-    }).start();
-
     return () => clearInterval(timer);
   }, []);
 
@@ -40,97 +31,81 @@ export default function RoundCompleteScreen({ navigation, route }) {
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
-  const progressDegree = progressAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
-
   return (
     <LinearGradient
       colors={['#0a0e27', '#1a1f3a', '#2a2f4a']}
       style={styles.container}
     >
-      <View style={styles.content}>
-        {/* Success Checkmark */}
-        <View style={styles.checkmarkContainer}>
-          <View style={styles.checkmarkCircle}>
-            <Text style={styles.checkmark}>✓</Text>
-          </View>
-        </View>
-
-        {/* Round Progress */}
-        <View style={styles.progressDots}>
-          {[1, 2, 3].map((dot) => (
-            <View key={dot} style={styles.dotContainer}>
-              <View
-                style={[
-                  styles.dot,
-                  dot <= round && styles.dotComplete,
-                  dot === round && styles.dotCurrent,
-                ]}
-              >
-                {dot <= round && <Text style={styles.dotCheck}>✓</Text>}
-              </View>
-              {dot < 3 && <View style={styles.dotLine} />}
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <View style={styles.content}>
+          {/* Success Checkmark */}
+          <View style={styles.checkmarkContainer}>
+            <View style={styles.checkmarkCircle}>
+              <Text style={styles.checkmark}>✓</Text>
             </View>
-          ))}
-        </View>
-
-        <Text style={styles.title}>Round {round} Done</Text>
-        
-        <Text style={styles.message}>
-          {round === 2 
-            ? 'Final check in 5 minutes' 
-            : 'Alarm will check again in 5 minutes'}
-        </Text>
-
-        {/* Countdown Circle */}
-        <View style={styles.timerContainer}>
-          <View style={styles.timerCircle}>
-            <Text style={styles.timerText}>{formatTime(timeLeft)}</Text>
-            <Text style={styles.timerLabel}>until next check</Text>
           </View>
-          <View style={styles.timerRing} />
-        </View>
 
-        {/* Info Box */}
-        <View style={styles.infoBox}>
-          <Text style={styles.infoIcon}>💤</Text>
-          <Text style={styles.infoText}>
-            Stay awake. The alarm will ring again to confirm you didn't fall back asleep.
+          {/* Round Progress */}
+          <View style={styles.progressDots}>
+            {[1, 2, 3].map((dot) => (
+              <View key={dot} style={styles.dotContainer}>
+                <View
+                  style={[
+                    styles.dot,
+                    dot <= round && styles.dotComplete,
+                    dot === round && styles.dotCurrent,
+                  ]}
+                >
+                  {dot <= round && <Text style={styles.dotCheck}>✓</Text>}
+                </View>
+                {dot < 3 && <View style={styles.dotLine} />}
+              </View>
+            ))}
+          </View>
+
+          <Text style={styles.title}>Round {round} Done</Text>
+
+          <Text style={styles.message}>
+            {round === 2
+              ? 'Final check in 5 minutes'
+              : 'Alarm will check again in 5 minutes'}
           </Text>
-        </View>
-      </View>
 
-      {/* Bottom Status */}
-      <View style={styles.statusBar}>
-        <View style={styles.statusItem}>
-          <Text style={styles.statusLabel}>Completed</Text>
-          <Text style={styles.statusValue}>{round}/3</Text>
+          {/* Single timer (only one) */}
+          <View style={styles.timerContainer}>
+            <View style={styles.timerCircle}>
+              <Text style={styles.timerText}>{formatTime(timeLeft)}</Text>
+              <Text style={styles.timerLabel}>until next check</Text>
+            </View>
+            <View style={styles.timerRing} />
+          </View>
+
+          {/* Info Box */}
+          <View style={styles.infoBox}>
+            <Text style={styles.infoIcon}>💤</Text>
+            <Text style={styles.infoText}>
+              Stay awake. The alarm will ring again to confirm you didn't fall back asleep.
+            </Text>
+          </View>
         </View>
-        <View style={styles.statusDivider} />
-        <View style={styles.statusItem}>
-          <Text style={styles.statusLabel}>Next Round</Text>
-          <Text style={styles.statusValue}>{formatTime(timeLeft)}</Text>
-        </View>
-      </View>
+      </SafeAreaView>
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
+  safe: { flex: 1 },
+
   content: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 30,
+    paddingTop: 10, // fixes “icon too high”
   },
-  checkmarkContainer: {
-    marginBottom: 40,
-  },
+
+  checkmarkContainer: { marginBottom: 30 },
   checkmarkCircle: {
     width: 80,
     height: 80,
@@ -148,15 +123,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#0a0e27',
   },
+
   progressDots: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 22,
   },
-  dotContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
+  dotContainer: { flexDirection: 'row', alignItems: 'center' },
   dot: {
     width: 40,
     height: 40,
@@ -167,45 +140,40 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  dotComplete: {
-    backgroundColor: '#00FF88',
-    borderColor: '#00FF88',
-  },
+  dotComplete: { backgroundColor: '#00FF88', borderColor: '#00FF88' },
   dotCurrent: {
     shadowColor: '#00FF88',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
     shadowRadius: 12,
   },
-  dotCheck: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#0a0e27',
-  },
+  dotCheck: { fontSize: 20, fontWeight: '700', color: '#0a0e27' },
   dotLine: {
     width: 30,
     height: 2,
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
     marginHorizontal: 8,
   },
+
   title: {
-    fontSize: 42,
+    fontSize: 40,
     fontWeight: '700',
     color: '#ffffff',
-    marginBottom: 12,
+    marginBottom: 10,
     letterSpacing: -1,
   },
   message: {
     fontSize: 18,
     color: 'rgba(255, 255, 255, 0.7)',
-    marginBottom: 50,
+    marginBottom: 34,
     textAlign: 'center',
     fontWeight: '500',
   },
+
   timerContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 50,
+    marginBottom: 38,
     position: 'relative',
   },
   timerCircle: {
@@ -239,6 +207,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 8,
   },
+
   infoBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -249,43 +218,11 @@ const styles = StyleSheet.create({
     padding: 20,
     maxWidth: 320,
   },
-  infoIcon: {
-    fontSize: 28,
-    marginRight: 16,
-  },
+  infoIcon: { fontSize: 28, marginRight: 16 },
   infoText: {
     flex: 1,
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.8)',
     lineHeight: 20,
-  },
-  statusBar: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    marginHorizontal: 30,
-    marginBottom: 50,
-    borderRadius: 16,
-    padding: 20,
-    justifyContent: 'space-around',
-  },
-  statusItem: {
-    alignItems: 'center',
-  },
-  statusLabel: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.5)',
-    fontWeight: '600',
-    marginBottom: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  statusValue: {
-    fontSize: 24,
-    color: '#ffffff',
-    fontWeight: '700',
-  },
-  statusDivider: {
-    width: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
 });

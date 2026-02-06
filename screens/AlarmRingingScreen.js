@@ -1,60 +1,70 @@
-// screens/AlarmRingingScreen.js
-import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Animated } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { Image } from "expo-image";
-import * as Speech from "expo-speech";
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Animated,
+  Vibration,
+  ScrollView,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Image } from 'expo-image';
+import * as Speech from 'expo-speech';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { startRinging, stopRinging } from "../services/alarmEngine";
 import { setAlarmVolume } from "../services/soundManager";
 
 export default function AlarmRingingScreen({ navigation, route }) {
-  const { userName, reason, round, proofMethod, aiPersonality } = route.params;
+  const { userName, reason, round = 1, aiPersonality } = route.params || {};
 
   const [pulseAnim] = useState(new Animated.Value(1));
   const [bounceAnim] = useState(new Animated.Value(0));
   const [fadeAnim] = useState(new Animated.Value(0));
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState('');
   const [volume, setVolume] = useState(1.0);
 
-  // Generate wake-up message
   const generateMessage = () => {
     const messages = {
       zen: `Good morning ${userName}. Today brings ${reason}. Time to begin.`,
       sassy: `Wake up ${userName}! Time to stop dreaming and do ${reason}!`,
       motivational: `GOOD MORNING ${userName}! Let's crush ${reason} today!`,
-      "drill-sergeant": `UP NOW ${userName}! ${reason} - MOVE MOVE MOVE!`,
+      'drill-sergeant': `UP NOW ${userName}! ${reason} - MOVE MOVE MOVE!`,
     };
-    return messages[aiPersonality] || messages["motivational"];
+    return messages[aiPersonality] || messages.motivational;
   };
 
   useEffect(() => {
     const msg = generateMessage();
     setMessage(msg);
 
-    // Speak message (voice line)
+    // Start vibration
+    Vibration.vibrate([1000, 500], true);
+
+    // Speak message
     Speech.speak(msg, {
-      language: "en-US",
+      language: 'en-US',
       pitch: 1.0,
       rate: 1.0,
       volume: 1.0,
     });
 
-    // ✅ Start real ringing (looping sound + vibration) using chosen genre
+    // Start alarm sound loop
     startRinging({ musicGenre: route.params?.musicGenre });
 
-    // Fade in animation
+    // Fade in
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 600,
       useNativeDriver: true,
     }).start();
 
-    // Eddy pulse animation (breathing effect)
+    // Eddy pulse
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
-          toValue: 1.1,
+          toValue: 1.08,
           duration: 800,
           useNativeDriver: true,
         }),
@@ -66,11 +76,11 @@ export default function AlarmRingingScreen({ navigation, route }) {
       ])
     ).start();
 
-    // Eddy bounce animation (trying to wake you up)
+    // Eddy bounce
     Animated.loop(
       Animated.sequence([
         Animated.timing(bounceAnim, {
-          toValue: -10,
+          toValue: -8,
           duration: 400,
           useNativeDriver: true,
         }),
@@ -83,216 +93,240 @@ export default function AlarmRingingScreen({ navigation, route }) {
     ).start();
 
     return () => {
-      // ✅ Stop ringing (sound + vibration) and stop speech
       stopRinging();
+      Vibration.cancel();
       Speech.stop();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const handleStart = () => {
+    stopRinging();
+    Vibration.cancel();
+    Speech.stop();
+    navigation.navigate('ProofTask', route.params);
+  };
+
+  const setLowVolume = async () => {
+    setVolume(0.3);
+    await setAlarmVolume(0.3);
+  };
+
+  const setFullVolume = async () => {
+    setVolume(1.0);
+    await setAlarmVolume(1.0);
+  };
+
   return (
-    <LinearGradient colors={["#FF0080", "#FF8C00", "#FF0080"]} style={styles.container}>
-      <View style={styles.content}>
-        {/* Eddy Character - Sleepy */}
-        <Animated.View
-          style={[
-            styles.eddyContainer,
-            {
-              opacity: fadeAnim,
-              transform: [{ scale: pulseAnim }, { translateY: bounceAnim }],
-            },
-          ]}
+    <LinearGradient colors={['#FF0080', '#FF8C00', '#FF0080']} style={styles.container}>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        {/* Scrollable content so nothing clips off-screen */}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
         >
-          <Image
-            source={require("../assets/eddy/eddy-sleepy.png")}
-            style={styles.eddyImage}
-            contentFit="contain"
-          />
-          <Text style={styles.eddyName}>Eddy is sleepy too!</Text>
-          <Text style={styles.eddySubtext}>Help him light up! 💡</Text>
-        </Animated.View>
-
-        {/* Round */}
-        <Text style={styles.roundText}>Round {round} of 3</Text>
-
-        {/* Title */}
-        <Text style={styles.title}>WAKE UP!</Text>
-
-        {/* Message */}
-        <View style={styles.messageBox}>
-          <Text style={styles.messageText}>"{message}"</Text>
-        </View>
-
-        {/* Warning */}
-        <View style={styles.warningBox}>
-          <Text style={styles.warningIcon}>⚠️</Text>
-          <Text style={styles.warningText}>Complete challenge to power Eddy's lightbulb!</Text>
-        </View>
-
-        {/* OPTIONAL quick volume control (no slider UI yet) */}
-        <View style={styles.volumeRow}>
-          <TouchableOpacity
-            style={styles.volumeButton}
-            onPress={async () => {
-              const newVol = 0.3;
-              setVolume(newVol);
-              await setAlarmVolume(newVol);
-            }}
+          {/* Eddy */}
+          <Animated.View
+            style={[
+              styles.eddyContainer,
+              {
+                opacity: fadeAnim,
+                transform: [{ scale: pulseAnim }, { translateY: bounceAnim }],
+              },
+            ]}
           >
-            <Text style={styles.volumeButtonText}>Lower Volume</Text>
-          </TouchableOpacity>
+            <Image
+              source={require('../assets/eddy/eddy-sleepy.png')}
+              style={styles.eddyImage}
+              contentFit="contain"
+            />
+            <Text style={styles.eddyName}>Eddy is sleepy too!</Text>
+            <Text style={styles.eddySubtext}>Help him light up! 💡</Text>
+          </Animated.View>
 
-          <TouchableOpacity
-            style={styles.volumeButton}
-            onPress={async () => {
-              const newVol = 1.0;
-              setVolume(newVol);
-              await setAlarmVolume(newVol);
-            }}
-          >
-            <Text style={styles.volumeButtonText}>Full Volume</Text>
+          {/* Round */}
+          <Text style={styles.roundText}>ROUND {round} OF 3</Text>
+
+          {/* Title */}
+          <Text style={styles.title}>WAKE{'\n'}UP!</Text>
+
+          {/* Message */}
+          <View style={styles.messageBox}>
+            <Text style={styles.messageText}>"{message}"</Text>
+          </View>
+
+          {/* Warning */}
+          <View style={styles.warningBox}>
+            <Text style={styles.warningIcon}>⚠️</Text>
+            <Text style={styles.warningText}>Complete challenge to power Eddy's lightbulb!</Text>
+          </View>
+
+          {/* Spacer so CTA never covers content */}
+          <View style={{ height: 130 }} />
+        </ScrollView>
+
+        {/* Bottom fixed controls (no overlap) */}
+        <View style={styles.bottomArea}>
+          <View style={styles.volumeRow}>
+            <TouchableOpacity style={styles.volumeBtn} onPress={setLowVolume}>
+              <Text style={styles.volumeBtnText}>Lower Volume</Text>
+              <Text style={styles.volumeSubText}>{volume === 0.3 ? 'Selected' : ''}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.volumeBtn} onPress={setFullVolume}>
+              <Text style={styles.volumeBtnText}>Full Volume</Text>
+              <Text style={styles.volumeSubText}>{volume === 1.0 ? 'Selected' : ''}</Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity style={styles.button} onPress={handleStart} activeOpacity={0.9}>
+            <Text style={styles.buttonText}>START CHALLENGE →</Text>
           </TouchableOpacity>
         </View>
-
-        <Text style={styles.volumeHint}>Volume: {Math.round(volume * 100)}%</Text>
-      </View>
-
-      {/* Button */}
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => {
-          console.log("✅ Button pressed - Navigating to ProofTask");
-          stopRinging();
-          Speech.stop();
-          navigation.navigate("ProofTask", route.params);
-        }}
-      >
-        <Text style={styles.buttonText}>START CHALLENGE →</Text>
-      </TouchableOpacity>
+      </SafeAreaView>
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+  safe: { flex: 1 },
+
+  scrollContent: {
+    alignItems: 'center',
     paddingHorizontal: 30,
+    paddingTop: 10,     // pulls Eddy down from the top
+    paddingBottom: 0,
   },
+
   eddyContainer: {
-    alignItems: "center",
-    marginBottom: 22,
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 18,
   },
   eddyImage: {
-    width: 200,
-    height: 200,
-    marginBottom: 15,
+    width: 170,         // slightly smaller so it never feels "outside the phone"
+    height: 170,
+    marginBottom: 12,
   },
   eddyName: {
     fontSize: 18,
-    fontWeight: "700",
-    color: "#ffffff",
+    fontWeight: '700',
+    color: '#ffffff',
     letterSpacing: 0.5,
     marginBottom: 5,
   },
   eddySubtext: {
     fontSize: 14,
-    color: "rgba(255, 255, 255, 0.85)",
-    fontStyle: "italic",
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontStyle: 'italic',
   },
+
   roundText: {
-    fontSize: 16,
-    color: "rgba(255, 255, 255, 0.8)",
-    fontWeight: "600",
-    marginBottom: 16,
-    textTransform: "uppercase",
+    fontSize: 15,
+    color: 'rgba(255, 255, 255, 0.82)',
+    fontWeight: '700',
+    marginBottom: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
+
   title: {
-    fontSize: 64,
-    fontWeight: "900",
-    color: "#ffffff",
-    marginBottom: 22,
-    textShadowColor: "rgba(0, 0, 0, 0.3)",
+    fontSize: 56,       // smaller to reduce overflow
+    fontWeight: '900',
+    color: '#ffffff',
+    marginBottom: 18,
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.28)',
     textShadowOffset: { width: 0, height: 4 },
     textShadowRadius: 10,
+    lineHeight: 62,
   },
+
   messageBox: {
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    width: '100%',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 20,
-    padding: 25,
+    padding: 22,
     marginBottom: 18,
     borderWidth: 2,
-    borderColor: "rgba(255, 255, 255, 0.3)",
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   messageText: {
-    fontSize: 18,
-    color: "#ffffff",
-    fontWeight: "600",
-    textAlign: "center",
-    lineHeight: 26,
+    fontSize: 17,
+    color: '#ffffff',
+    fontWeight: '600',
+    textAlign: 'center',
+    lineHeight: 25,
   },
+
   warningBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    padding: 15,
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    padding: 14,
     borderRadius: 12,
-    marginBottom: 16,
   },
   warningIcon: {
-    fontSize: 24,
+    fontSize: 22,
     marginRight: 10,
   },
   warningText: {
     flex: 1,
     fontSize: 14,
-    color: "#ffffff",
-    fontWeight: "600",
+    color: '#ffffff',
+    fontWeight: '600',
   },
+
+  bottomArea: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+
   volumeRow: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: 10,
-    marginTop: 6,
+    marginBottom: 12,
   },
-  volumeButton: {
-    backgroundColor: "rgba(255,255,255,0.2)",
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 12,
+  volumeBtn: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.18)',
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.25)",
+    borderColor: 'rgba(255,255,255,0.25)',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    alignItems: 'center',
   },
-  volumeButtonText: {
-    color: "#fff",
-    fontWeight: "800",
-    fontSize: 12,
-    letterSpacing: 0.5,
+  volumeBtnText: {
+    color: '#ffffff',
+    fontWeight: '800',
+    fontSize: 14,
   },
-  volumeHint: {
-    marginTop: 10,
-    color: "rgba(255,255,255,0.85)",
-    fontWeight: "700",
-    fontSize: 12,
+  volumeSubText: {
+    marginTop: 4,
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 11,
+    fontWeight: '600',
+    height: 14,
   },
+
   button: {
-    marginHorizontal: 30,
-    marginBottom: 50,
-    backgroundColor: "#ffffff",
-    paddingVertical: 20,
+    backgroundColor: '#ffffff',
+    paddingVertical: 18,
     borderRadius: 16,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.28,
     shadowRadius: 12,
     elevation: 8,
   },
   buttonText: {
     fontSize: 20,
-    fontWeight: "900",
-    color: "#FF0080",
-    textAlign: "center",
+    fontWeight: '900',
+    color: '#FF0080',
+    textAlign: 'center',
     letterSpacing: 1,
   },
 });
+
