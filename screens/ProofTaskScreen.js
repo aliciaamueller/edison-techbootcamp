@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Animated, Vibration } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Image } from 'expo-image';
 import { Accelerometer } from 'expo-sensors';
 import * as Speech from 'expo-speech';
 
@@ -15,39 +16,83 @@ export default function ProofTaskScreen({ navigation, route }) {
   
   const [steps, setSteps] = useState(0);
   const [progressAnim] = useState(new Animated.Value(0));
+  const [runAnim] = useState(new Animated.Value(0));
+  const [fadeAnim] = useState(new Animated.Value(0));
   const required = requiredSteps[round];
 
+  // Step detection with improved sensitivity
   useEffect(() => {
     let lastY = 0;
-    let stepCount = 0;
+    let lastZ = 0;
+    const STEP_THRESHOLD = 0.15;
+    const TIME_BETWEEN_STEPS = 300;
+    let lastStepTime = 0;
 
-    const subscription = Accelerometer.addListener(({ y }) => {
-      if (Math.abs(y - lastY) > 0.3) {
-        stepCount++;
+    const subscription = Accelerometer.addListener(({ x, y, z }) => {
+      const now = Date.now();
+      
+      const deltaY = Math.abs(y - lastY);
+      const deltaZ = Math.abs(z - lastZ);
+      const delta = Math.max(deltaY, deltaZ);
+
+      if (delta > STEP_THRESHOLD && now - lastStepTime > TIME_BETWEEN_STEPS) {
+        lastStepTime = now;
+        
         setSteps((prev) => {
           const newSteps = Math.min(prev + 1, required);
-          Vibration.vibrate(50);
+          if (newSteps < required) {
+            Vibration.vibrate(50);
+          }
+          console.log(`Step detected! Total: ${newSteps}/${required}`);
           return newSteps;
         });
       }
+
       lastY = y;
+      lastZ = z;
     });
 
-    Accelerometer.setUpdateInterval(200);
+    Accelerometer.setUpdateInterval(100);
 
     return () => subscription.remove();
   }, []);
 
+  // Animations
   useEffect(() => {
+    // Fade in
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
+
+    // Progress bar animation
     Animated.timing(progressAnim, {
       toValue: steps / required,
       duration: 300,
       useNativeDriver: false,
     }).start();
 
+    // Eddy running animation (left-right bounce)
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(runAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(runAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    // Navigate when complete
     if (steps >= required) {
       Vibration.vibrate([100, 100, 100]);
-      Speech.speak(`Great job ${userName}! Challenge complete!`);
+      Speech.speak(`Great job ${userName}! Eddy's lightbulb is powered up!`);
       
       setTimeout(() => {
         if (round < 3) {
@@ -64,14 +109,32 @@ export default function ProofTaskScreen({ navigation, route }) {
     outputRange: ['0%', '100%'],
   });
 
+  const runTranslate = runAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 8],
+  });
+
   return (
     <LinearGradient colors={['#4158D0', '#C850C0']} style={styles.container}>
       <View style={styles.content}>
         {/* Eddy Running */}
-        <View style={styles.eddyContainer}>
-          <Text style={styles.eddyIcon}>🏃</Text>
-          <Text style={styles.eddyName}>Eddy is Moving!</Text>
-        </View>
+        <Animated.View 
+          style={[
+            styles.eddyContainer,
+            { 
+              opacity: fadeAnim,
+              transform: [{ translateX: runTranslate }] 
+            }
+          ]}
+        >
+          <Image
+            source={require('../assets/eddy/eddy-running.png')}
+            style={styles.eddyImage}
+            contentFit="contain"
+          />
+          <Text style={styles.eddyName}>Powering up Eddy!</Text>
+          <Text style={styles.eddySubtext}>Keep walking! ⚡</Text>
+        </Animated.View>
 
         {/* Title */}
         <Text style={styles.title}>Walk {required} Steps</Text>
@@ -95,7 +158,7 @@ export default function ProofTaskScreen({ navigation, route }) {
             />
           </View>
           <Text style={styles.progressText}>
-            {Math.round((steps / required) * 100)}%
+            {Math.round((steps / required) * 100)}% Charged
           </Text>
         </View>
 
@@ -104,8 +167,8 @@ export default function ProofTaskScreen({ navigation, route }) {
           <Text style={styles.instructionIcon}>👟</Text>
           <Text style={styles.instructionText}>
             {steps < required
-              ? 'Keep walking around!'
-              : 'Perfect! Completing...'}
+              ? 'Keep walking to power the lightbulb!'
+              : 'Perfect! Lightbulb fully charged! ✨'}
           </Text>
         </View>
       </View>
@@ -123,14 +186,23 @@ const styles = StyleSheet.create({
   },
   eddyContainer: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 30,
   },
-  eddyIcon: { fontSize: 100 },
+  eddyImage: {
+    width: 180,
+    height: 180,
+    marginBottom: 12,
+  },
   eddyName: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: '#ffffff',
-    marginTop: 10,
+    marginBottom: 4,
+  },
+  eddySubtext: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontStyle: 'italic',
   },
   title: {
     fontSize: 36,
@@ -183,7 +255,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   progressText: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     color: '#ffffff',
   },
@@ -199,9 +271,10 @@ const styles = StyleSheet.create({
     marginRight: 15,
   },
   instructionText: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#ffffff',
     fontWeight: '600',
     flex: 1,
+    lineHeight: 22,
   },
 });

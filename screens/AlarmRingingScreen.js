@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Vibration } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Image } from 'expo-image';
 import * as Speech from 'expo-speech';
 
 export default function AlarmRingingScreen({ navigation, route }) {
   const { userName, reason, round, proofMethod, aiPersonality } = route.params;
   const [pulseAnim] = useState(new Animated.Value(1));
+  const [bounceAnim] = useState(new Animated.Value(0));
+  const [fadeAnim] = useState(new Animated.Value(0));
   const [message, setMessage] = useState('');
 
   // Generate wake-up message
@@ -34,17 +37,40 @@ export default function AlarmRingingScreen({ navigation, route }) {
       volume: 1.0,
     });
 
-    // Pulse animation
+    // Fade in animation
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
+
+    // Eddy pulse animation (breathing effect)
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
-          toValue: 1.2,
+          toValue: 1.1,
           duration: 800,
           useNativeDriver: true,
         }),
         Animated.timing(pulseAnim, {
           toValue: 1,
           duration: 800,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    // Eddy bounce animation (trying to wake you up)
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(bounceAnim, {
+          toValue: -10,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+        Animated.timing(bounceAnim, {
+          toValue: 0,
+          duration: 400,
           useNativeDriver: true,
         }),
       ])
@@ -59,10 +85,26 @@ export default function AlarmRingingScreen({ navigation, route }) {
   return (
     <LinearGradient colors={['#FF0080', '#FF8C00', '#FF0080']} style={styles.container}>
       <View style={styles.content}>
-        {/* Eddy Character Placeholder */}
-        <Animated.View style={[styles.eddyContainer, { transform: [{ scale: pulseAnim }] }]}>
-          <Text style={styles.eddyIcon}>😴</Text>
-          <Text style={styles.eddyName}>Eddy</Text>
+        {/* Eddy Character - Sleepy */}
+        <Animated.View 
+          style={[
+            styles.eddyContainer, 
+            { 
+              opacity: fadeAnim,
+              transform: [
+                { scale: pulseAnim },
+                { translateY: bounceAnim }
+              ] 
+            }
+          ]}
+        >
+          <Image
+            source={require('../assets/eddy/eddy-sleepy.png')}
+            style={styles.eddyImage}
+            contentFit="contain"
+          />
+          <Text style={styles.eddyName}>Eddy is sleepy too!</Text>
+          <Text style={styles.eddySubtext}>Help him light up! 💡</Text>
         </Animated.View>
 
         {/* Round */}
@@ -79,11 +121,11 @@ export default function AlarmRingingScreen({ navigation, route }) {
         {/* Warning */}
         <View style={styles.warningBox}>
           <Text style={styles.warningIcon}>⚠️</Text>
-          <Text style={styles.warningText}>Complete challenge to stop alarm</Text>
+          <Text style={styles.warningText}>Complete challenge to power Eddy's lightbulb!</Text>
         </View>
       </View>
 
-      {/* Button - THIS MUST WORK */}
+      {/* Button */}
       <TouchableOpacity
         style={styles.button}
         onPress={() => {
@@ -109,17 +151,24 @@ const styles = StyleSheet.create({
   },
   eddyContainer: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 30,
   },
-  eddyIcon: {
-    fontSize: 120,
-    marginBottom: 10,
+  eddyImage: {
+    width: 200,
+    height: 200,
+    marginBottom: 15,
   },
   eddyName: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: '700',
     color: '#ffffff',
-    letterSpacing: 2,
+    letterSpacing: 0.5,
+    marginBottom: 5,
+  },
+  eddySubtext: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontStyle: 'italic',
   },
   roundText: {
     fontSize: 16,
@@ -164,6 +213,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   warningText: {
+    flex: 1,
     fontSize: 14,
     color: '#ffffff',
     fontWeight: '600',

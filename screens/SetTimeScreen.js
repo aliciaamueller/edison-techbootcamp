@@ -145,10 +145,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   timeText: {
-    fontSize: 56,
+    fontSize: 48,
     fontWeight: '900',
     color: '#ffffff',
-    marginBottom: 8,
+    marginBottom: -2,
   },
   timeLabel: {
     fontSize: 14,
