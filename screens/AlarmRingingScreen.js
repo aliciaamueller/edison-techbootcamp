@@ -1,332 +1,301 @@
-import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Animated,
-  Vibration,
-  ScrollView,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Image } from 'expo-image';
-import * as Speech from 'expo-speech';
-import { SafeAreaView } from 'react-native-safe-area-context';
+// screens/AlarmRingingScreen.js
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, Vibration } from "react-native";
+import { Image } from "expo-image";
+import * as Speech from "expo-speech";
+
+import ScreenShell from "../ui/ScreenShell";
+import GlassCard from "../ui/GlassCard";
+import { theme } from "../ui/theme";
 
 import { startRinging, stopRinging } from "../services/alarmEngine";
 import { setAlarmVolume } from "../services/soundManager";
 
 export default function AlarmRingingScreen({ navigation, route }) {
-  const { userName, reason, round = 1, aiPersonality } = route.params || {};
+  const params = route?.params || {};
+  const {
+    round = 1,
+    userName = "you",
+    reason = "your goals",
+    aiPersonality = "motivational",
+    musicGenre = "energetic",
+  } = params;
 
-  const [pulseAnim] = useState(new Animated.Value(1));
-  const [bounceAnim] = useState(new Animated.Value(0));
-  const [fadeAnim] = useState(new Animated.Value(0));
-  const [message, setMessage] = useState('');
-  const [volume, setVolume] = useState(1.0);
+  const [volumeLabel, setVolumeLabel] = useState(100);
 
-  const generateMessage = () => {
-    const messages = {
-      zen: `Good morning ${userName}. Today brings ${reason}. Time to begin.`,
-      sassy: `Wake up ${userName}! Time to stop dreaming and do ${reason}!`,
-      motivational: `GOOD MORNING ${userName}! Let's crush ${reason} today!`,
-      'drill-sergeant': `UP NOW ${userName}! ${reason} - MOVE MOVE MOVE!`,
-    };
-    return messages[aiPersonality] || messages.motivational;
+  const loopTimerRef = useRef(null);
+  const isArmedRef = useRef(true);
+
+  const headline = round === 1 ? "WAKE\nUP" : round === 2 ? "STAY\nUP" : "FINAL\nCHECK";
+  const roundLabel = `ROUND ${round} OF 3`;
+
+  // Full “AI” sentence (spoken)
+  const spokenMessage = useMemo(() => {
+    const name = userName?.trim() ? userName.trim() : "you";
+    const why = reason?.trim() ? reason.trim() : "your goals";
+
+    if (aiPersonality === "sassy") {
+      return `Alright ${name}. Enough. Time to stop negotiating with your pillow and get up for ${why}.`;
+    }
+    if (aiPersonality === "drill-sergeant") {
+      return `UP NOW ${name}! You said ${why}. MOVE. PROVE YOU'RE AWAKE.`;
+    }
+    if (aiPersonality === "zen") {
+      return `Good morning ${name}. Today brings ${why}. Breathe once. Stand up. Begin.`;
+    }
+    return `Good morning ${name}! Let's crush ${why} today.`;
+  }, [aiPersonality, userName, reason]);
+
+  // Short UI message only (what you asked for)
+  const shortReason = useMemo(() => {
+    const r = (reason || "").trim();
+    if (!r) return "Wake up";
+
+    // Keep it short: first clause + max 6 words
+    const first = r.split(/[.!?\n]/)[0].trim();
+    const words = first.split(/\s+/).filter(Boolean);
+    const sliced = words.slice(0, 6).join(" ");
+    return words.length > 6 ? `${sliced}…` : sliced;
+  }, [reason]);
+
+  const eddyImage =
+    round === 1
+      ? require("../assets/eddy/eddy-sleepy.png")
+      : round === 2
+      ? require("../assets/eddy/eddy-running.png")
+      : require("../assets/eddy/eddy-happy.png");
+
+  const speakOnce = async () => {
+    try {
+      if (!isArmedRef.current) return;
+
+      // Don’t stack speech over itself
+      const speaking = await Speech.isSpeakingAsync();
+      if (speaking) return;
+
+      Speech.speak(spokenMessage, { rate: 0.95, pitch: 1.0 });
+    } catch {
+      // ignore
+    }
   };
 
   useEffect(() => {
-    const msg = generateMessage();
-    setMessage(msg);
+    isArmedRef.current = true;
 
-    // Start vibration
-    Vibration.vibrate([1000, 500], true);
+    // Start looping alarm sound bed (your alarmEngine should loop)
+    startRinging({ musicGenre });
 
-    // Speak message
-    Speech.speak(msg, {
-      language: 'en-US',
-      pitch: 1.0,
-      rate: 1.0,
-      volume: 1.0,
-    });
+    // Start vibration loop
+    Vibration.vibrate([0, 900, 500, 900, 500], true);
 
-    // Start alarm sound loop
-    startRinging({ musicGenre: route.params?.musicGenre });
+    // Speak immediately, then loop every ~9s
+    Speech.stop();
+    speakOnce();
 
-    // Fade in
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 600,
-      useNativeDriver: true,
-    }).start();
-
-    // Eddy pulse
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.08,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-
-    // Eddy bounce
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(bounceAnim, {
-          toValue: -8,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-        Animated.timing(bounceAnim, {
-          toValue: 0,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
+    loopTimerRef.current = setInterval(() => {
+      speakOnce();
+    }, 9000);
 
     return () => {
+      isArmedRef.current = false;
+      if (loopTimerRef.current) clearInterval(loopTimerRef.current);
+
       stopRinging();
-      Vibration.cancel();
       Speech.stop();
+      Vibration.cancel();
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [musicGenre, spokenMessage]);
 
-  const handleStart = () => {
+  const goToChallenge = () => {
+    // IMPORTANT: stop everything the moment they press the button
+    isArmedRef.current = false;
+    if (loopTimerRef.current) clearInterval(loopTimerRef.current);
+
     stopRinging();
-    Vibration.cancel();
     Speech.stop();
-    navigation.navigate('ProofTask', route.params);
+    Vibration.cancel();
+
+    navigation.navigate("ProofTask", { ...params, round });
   };
 
-  const setLowVolume = async () => {
-    setVolume(0.3);
+  // optional helpers if you still want volume controls later
+  const setLow = async () => {
     await setAlarmVolume(0.3);
+    setVolumeLabel(30);
   };
-
-  const setFullVolume = async () => {
-    setVolume(1.0);
+  const setFull = async () => {
     await setAlarmVolume(1.0);
+    setVolumeLabel(100);
   };
 
   return (
-    <LinearGradient colors={['#FF0080', '#FF8C00', '#FF0080']} style={styles.container}>
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-        {/* Scrollable content so nothing clips off-screen */}
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Eddy */}
-          <Animated.View
-            style={[
-              styles.eddyContainer,
-              {
-                opacity: fadeAnim,
-                transform: [{ scale: pulseAnim }, { translateY: bounceAnim }],
-              },
-            ]}
-          >
-            <Image
-              source={require('../assets/eddy/eddy-sleepy.png')}
-              style={styles.eddyImage}
-              contentFit="contain"
-            />
-            <Text style={styles.eddyName}>Eddy is sleepy too!</Text>
-            <Text style={styles.eddySubtext}>Help him light up! 💡</Text>
-          </Animated.View>
+    <ScreenShell variant="alarm">
+      <View style={styles.wrap}>
+        <View style={styles.center}>
+          <Image source={eddyImage} style={styles.eddy} contentFit="contain" />
 
-          {/* Round */}
-          <Text style={styles.roundText}>ROUND {round} OF 3</Text>
+          <Text style={styles.oneLine}>
+            Eddy is sleepy too — <Text style={styles.oneLineMuted}>help him light up 💡</Text>
+          </Text>
 
-          {/* Title */}
-          <Text style={styles.title}>WAKE{'\n'}UP!</Text>
-
-          {/* Message */}
-          <View style={styles.messageBox}>
-            <Text style={styles.messageText}>"{message}"</Text>
+          <View style={styles.roundPill}>
+            <Text style={styles.roundText}>{roundLabel}</Text>
           </View>
 
-          {/* Warning */}
-          <View style={styles.warningBox}>
-            <Text style={styles.warningIcon}>⚠️</Text>
-            <Text style={styles.warningText}>Complete challenge to power Eddy's lightbulb!</Text>
-          </View>
+          <Text style={styles.big}>{headline}</Text>
 
-          {/* Spacer so CTA never covers content */}
-          <View style={{ height: 130 }} />
-        </ScrollView>
+          <GlassCard style={styles.reasonCard}>
+            <Text style={styles.reasonLabel}>Today</Text>
+            <Text style={styles.reasonText}>{shortReason}</Text>
+          </GlassCard>
 
-        {/* Bottom fixed controls (no overlap) */}
-        <View style={styles.bottomArea}>
-          <View style={styles.volumeRow}>
-            <TouchableOpacity style={styles.volumeBtn} onPress={setLowVolume}>
-              <Text style={styles.volumeBtnText}>Lower Volume</Text>
-              <Text style={styles.volumeSubText}>{volume === 0.3 ? 'Selected' : ''}</Text>
+          <Text style={styles.volTiny}>Volume: {volumeLabel}%</Text>
+
+          {/* If you want the buttons back later, uncomment:
+          <View style={styles.volRow}>
+            <TouchableOpacity activeOpacity={0.9} style={styles.volBtn} onPress={setLow}>
+              <Text style={styles.volBtnText}>Lower volume</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity style={styles.volumeBtn} onPress={setFullVolume}>
-              <Text style={styles.volumeBtnText}>Full Volume</Text>
-              <Text style={styles.volumeSubText}>{volume === 1.0 ? 'Selected' : ''}</Text>
+            <TouchableOpacity activeOpacity={0.9} style={styles.volBtn} onPress={setFull}>
+              <Text style={styles.volBtnText}>Full volume</Text>
             </TouchableOpacity>
           </View>
-
-          <TouchableOpacity style={styles.button} onPress={handleStart} activeOpacity={0.9}>
-            <Text style={styles.buttonText}>START CHALLENGE →</Text>
-          </TouchableOpacity>
+          */}
         </View>
-      </SafeAreaView>
-    </LinearGradient>
+
+        <TouchableOpacity activeOpacity={0.92} style={styles.cta} onPress={goToChallenge}>
+          <Text style={styles.ctaText}>START CHALLENGE</Text>
+          <Text style={styles.ctaArrow}>→</Text>
+        </TouchableOpacity>
+      </View>
+    </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  safe: { flex: 1 },
-
-  scrollContent: {
-    alignItems: 'center',
-    paddingHorizontal: 30,
-    paddingTop: 10,     // pulls Eddy down from the top
-    paddingBottom: 0,
-  },
-
-  eddyContainer: {
-    alignItems: 'center',
-    marginTop: 10,
-    marginBottom: 18,
-  },
-  eddyImage: {
-    width: 170,         // slightly smaller so it never feels "outside the phone"
-    height: 170,
-    marginBottom: 12,
-  },
-  eddyName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#ffffff',
-    letterSpacing: 0.5,
-    marginBottom: 5,
-  },
-  eddySubtext: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.85)',
-    fontStyle: 'italic',
-  },
-
-  roundText: {
-    fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.82)',
-    fontWeight: '700',
-    marginBottom: 10,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-
-  title: {
-    fontSize: 56,       // smaller to reduce overflow
-    fontWeight: '900',
-    color: '#ffffff',
-    marginBottom: 18,
-    textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.28)',
-    textShadowOffset: { width: 0, height: 4 },
-    textShadowRadius: 10,
-    lineHeight: 62,
-  },
-
-  messageBox: {
-    width: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 20,
-    padding: 22,
-    marginBottom: 18,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  messageText: {
-    fontSize: 17,
-    color: '#ffffff',
-    fontWeight: '600',
-    textAlign: 'center',
-    lineHeight: 25,
-  },
-
-  warningBox: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    padding: 14,
-    borderRadius: 12,
-  },
-  warningIcon: {
-    fontSize: 22,
-    marginRight: 10,
-  },
-  warningText: {
+  wrap: {
     flex: 1,
-    fontSize: 14,
-    color: '#ffffff',
-    fontWeight: '600',
+    paddingBottom: 120, // reserve so nothing can ever sit behind CTA
   },
-
-  bottomArea: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-  },
-
-  volumeRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 12,
-  },
-  volumeBtn: {
+  center: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    alignItems: 'center',
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: theme.space.xl,
+    gap: 12,
   },
-  volumeBtnText: {
-    color: '#ffffff',
-    fontWeight: '800',
-    fontSize: 14,
+  eddy: {
+    width: 160,
+    height: 160,
+    marginBottom: 6,
   },
-  volumeSubText: {
-    marginTop: 4,
-    color: 'rgba(255,255,255,0.75)',
-    fontSize: 11,
-    fontWeight: '600',
-    height: 14,
-  },
-
-  button: {
-    backgroundColor: '#ffffff',
-    paddingVertical: 18,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.28,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  buttonText: {
+  oneLine: {
+    color: theme.colors.text,
     fontSize: 20,
-    fontWeight: '900',
-    color: '#FF0080',
-    textAlign: 'center',
-    letterSpacing: 1,
+    fontWeight: "900",
+    textAlign: "center",
+    letterSpacing: -0.2,
   },
-});
+  oneLineMuted: {
+    color: theme.colors.textMuted,
+    fontWeight: "900",
+  },
+  roundPill: {
+    marginTop: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: theme.radius.pill,
+    backgroundColor: "rgba(255,255,255,0.14)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.22)",
+  },
+  roundText: {
+    color: theme.colors.text,
+    fontWeight: "900",
+    letterSpacing: 1.2,
+    fontSize: 12,
+  },
+  big: {
+    color: theme.colors.text,
+    fontSize: 64,
+    fontWeight: "900",
+    textAlign: "center",
+    letterSpacing: 2,
+    lineHeight: 66,
+    marginTop: 6,
+    textShadowColor: "rgba(0,0,0,0.18)",
+    textShadowOffset: { width: 0, height: 8 },
+    textShadowRadius: 14,
+  },
+  reasonCard: {
+    width: "100%",
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+  reasonLabel: {
+    color: theme.colors.textFaint,
+    fontWeight: "900",
+    fontSize: 12,
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
+    marginBottom: 8,
+  },
+  reasonText: {
+    color: theme.colors.text,
+    fontWeight: "900",
+    fontSize: 22,
+    textAlign: "center",
+    letterSpacing: -0.2,
+  },
+  volTiny: {
+    color: theme.colors.textFaint,
+    fontWeight: "800",
+    fontSize: 13,
+    marginTop: 4,
+  },
+  cta: {
+    position: "absolute",
+    left: theme.space.xl,
+    right: theme.space.xl,
+    bottom: 28,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.95)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 14,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.06)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  ctaText: {
+    color: "#111",
+    fontWeight: "900",
+    fontSize: 18,
+    letterSpacing: 1.2,
+  },
+  ctaArrow: {
+    color: "#111",
+    fontSize: 22,
+    fontWeight: "900",
+  },
 
+  // (kept for later if you re-enable buttons)
+  volRow: { flexDirection: "row", gap: 12, width: "100%", marginTop: 4 },
+  volBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.18)",
+    alignItems: "center",
+  },
+  volBtnText: { color: theme.colors.text, fontWeight: "900" },
+});

@@ -1,8 +1,11 @@
 // screens/SetTimeScreen.js
 import React, { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import DateTimePicker from "@react-native-community/datetimepicker";
+
+import ScreenShell from "../ui/ScreenShell";
+import GlassCard from "../ui/GlassCard";
+import { theme } from "../ui/theme";
 
 export default function SetTimeScreen({ navigation }) {
   const [time, setTime] = useState(new Date());
@@ -12,186 +15,143 @@ export default function SetTimeScreen({ navigation }) {
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
   const toggleDay = (day) => {
-    setSelectedDays((prev) => {
-      if (prev.includes(day)) return prev.filter((d) => d !== day);
-      return [...prev, day];
-    });
+    if (selectedDays.includes(day)) setSelectedDays(selectedDays.filter((d) => d !== day));
+    else setSelectedDays([...selectedDays, day]);
   };
 
-  const formatTime = (date) => {
-    return date.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
-  };
+  const formatTime = (date) =>
+    date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
 
   return (
-    <LinearGradient colors={["#0a0e27", "#1a1f3a", "#2a2f4a"]} style={styles.container}>
+    <ScreenShell variant="base">
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>←</Text>
+          <Text style={styles.back}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.stepIndicator}>Step 1 of 4</Text>
+        <Text style={styles.step}>Step 1 of 4</Text>
       </View>
 
-      <ScrollView style={styles.content}>
-        <Text style={styles.title}>What time do you{"\n"}need to wake up?</Text>
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.h1}>What time do you{`\n`}need to wake up?</Text>
 
-        {/* Time Display */}
-        <TouchableOpacity style={styles.timeDisplay} onPress={() => setShowPicker(true)}>
-          <Text style={styles.timeText}>{formatTime(time)}</Text>
-          <Text style={styles.timeLabel}>Tap to change</Text>
+        <TouchableOpacity activeOpacity={0.9} onPress={() => setShowPicker(true)}>
+          <GlassCard style={styles.timeCard}>
+            <Text style={styles.timeText}>{formatTime(time)}</Text>
+            <Text style={styles.sub}>Tap to change</Text>
+          </GlassCard>
         </TouchableOpacity>
 
         {showPicker && (
-          <DateTimePicker
-            value={time}
-            mode="time"
-            display="spinner"
-            onChange={(event, selectedTime) => {
-              // On Android, picker closes after selection; on iOS spinner can stay open
-              setShowPicker(Platform.OS === "ios");
-              if (selectedTime) setTime(selectedTime);
-            }}
-          />
+          <View style={styles.pickerWrap}>
+            <DateTimePicker
+              value={time}
+              mode="time"
+              display="spinner"
+              onChange={(event, selectedTime) => {
+                // iOS keeps spinner open, Android closes
+                setShowPicker(Platform.OS === "ios");
+                if (selectedTime) setTime(selectedTime);
+              }}
+            />
+          </View>
         )}
 
-        {/* Days */}
-        <Text style={styles.sectionLabel}>Repeat on</Text>
-        <View style={styles.daysContainer}>
-          {days.map((day) => (
-            <TouchableOpacity
-              key={day}
-              style={[styles.dayPill, selectedDays.includes(day) && styles.dayPillActive]}
-              onPress={() => toggleDay(day)}
-            >
-              <Text style={[styles.dayText, selectedDays.includes(day) && styles.dayTextActive]}>
-                {day}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        <Text style={styles.label}>Repeat on</Text>
+        <View style={styles.daysRow}>
+          {days.map((day) => {
+            const active = selectedDays.includes(day);
+            return (
+              <TouchableOpacity
+                key={day}
+                onPress={() => toggleDay(day)}
+                activeOpacity={0.85}
+                style={[styles.dayPill, active && styles.dayPillActive]}
+              >
+                <Text style={[styles.dayText, active && styles.dayTextActive]}>{day}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
-      </ScrollView>
 
-      {/* Next Button */}
-      <TouchableOpacity
-        style={styles.nextButton}
-        onPress={() => {
-          navigation.navigate("Reason", {
-            timeDate: time, // ✅ real Date object
-            timeLabel: formatTime(time), // ✅ display label
-            days: selectedDays,
-          });
-        }}
-      >
-        <LinearGradient
-          colors={["#4158D0", "#C850C0"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.nextGradient}
+        <TouchableOpacity
+          style={styles.cta}
+          activeOpacity={0.9}
+          onPress={() =>
+            navigation.navigate("Reason", {
+              time: formatTime(time), // keep as STRING
+              days: selectedDays,
+            })
+          }
         >
-          <Text style={styles.nextText}>Next</Text>
-          <Text style={styles.nextArrow}>→</Text>
-        </LinearGradient>
-      </TouchableOpacity>
-    </LinearGradient>
+          <Text style={styles.ctaText}>Next</Text>
+          <Text style={styles.ctaArrow}>→</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 30,
-    paddingTop: 60,
-    paddingBottom: 20,
+    paddingTop: 6,
+    marginBottom: 12,
   },
-  backButton: { fontSize: 32, color: "#ffffff" },
-  stepIndicator: {
-    fontSize: 14,
-    color: "rgba(255, 255, 255, 0.5)",
-    fontWeight: "500",
-  },
-  content: { flex: 1, paddingHorizontal: 30 },
-  title: {
-    fontSize: 36,
-    fontWeight: "700",
-    color: "#ffffff",
-    marginBottom: 40,
-    lineHeight: 44,
-  },
-  timeDisplay: {
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
-    borderRadius: 20,
-    padding: 40,
-    alignItems: "center",
-    marginBottom: 40,
-    borderWidth: 2,
-    borderColor: "rgba(255, 255, 255, 0.1)",
-  },
-  timeText: {
-    fontSize: 48,
+  back: { color: theme.colors.text, fontSize: 30, fontWeight: "700" },
+  step: { color: theme.colors.textFaint, fontWeight: "700" },
+
+  content: { paddingBottom: 30 },
+  h1: {
+    color: theme.colors.text,
+    fontSize: 40,
     fontWeight: "900",
-    color: "#ffffff",
-    marginBottom: -2,
+    letterSpacing: -1,
+    marginBottom: 18,
+    lineHeight: 46,
   },
-  timeLabel: {
-    fontSize: 14,
-    color: "rgba(255, 255, 255, 0.5)",
-    fontWeight: "500",
-  },
-  sectionLabel: {
-    fontSize: 16,
-    color: "rgba(255, 255, 255, 0.7)",
-    fontWeight: "600",
-    marginBottom: 16,
-    textTransform: "uppercase",
+
+  timeCard: { alignItems: "center", paddingVertical: 26, marginBottom: 14 },
+  timeText: { color: theme.colors.text, fontSize: 52, fontWeight: "900", letterSpacing: -1.5 },
+  sub: { color: theme.colors.textFaint, marginTop: 8, fontWeight: "700" },
+
+  pickerWrap: { marginBottom: 14 },
+
+  label: {
+    color: theme.colors.textFaint,
+    fontWeight: "900",
     letterSpacing: 1,
+    textTransform: "uppercase",
+    marginTop: 10,
+    marginBottom: 12,
   },
-  daysContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-    marginBottom: 40,
-  },
+
+  daysRow: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 24 },
   dayPill: {
     paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
-    borderWidth: 2,
-    borderColor: "rgba(255, 255, 255, 0.1)",
+    paddingHorizontal: 16,
+    borderRadius: theme.radius.pill,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.16)",
   },
   dayPillActive: {
-    backgroundColor: "rgba(65, 88, 208, 0.2)",
-    borderColor: "#4158D0",
+    backgroundColor: "rgba(255,255,255,0.14)",
+    borderColor: "rgba(255,255,255,0.28)",
   },
-  dayText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "rgba(255, 255, 255, 0.5)",
-  },
-  dayTextActive: { color: "#ffffff" },
-  nextButton: {
-    marginHorizontal: 30,
-    marginBottom: 50,
-    borderRadius: 16,
-    overflow: "hidden",
-  },
-  nextGradient: {
-    flexDirection: "row",
+  dayText: { color: theme.colors.textFaint, fontWeight: "900", fontSize: 14 },
+  dayTextActive: { color: theme.colors.text },
+
+  cta: {
+    height: 62,
+    borderRadius: theme.radius.xl,
+    backgroundColor: "rgba(255,255,255,0.88)",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 20,
+    flexDirection: "row",
+    gap: 10,
   },
-  nextText: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#ffffff",
-    marginRight: 10,
-  },
-  nextArrow: { fontSize: 24, color: "#ffffff" },
+  ctaText: { color: theme.colors.buttonTextDark, fontWeight: "900", fontSize: 18 },
+  ctaArrow: { color: theme.colors.buttonTextDark, fontWeight: "900", fontSize: 20 },
 });

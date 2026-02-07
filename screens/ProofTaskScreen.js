@@ -1,280 +1,327 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Animated, Vibration } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Image } from 'expo-image';
-import { Accelerometer } from 'expo-sensors';
-import * as Speech from 'expo-speech';
+// screens/ProofTaskScreen.js
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Vibration, Alert } from "react-native";
+import { Pedometer } from "expo-sensors";
+import * as Speech from "expo-speech";
+
+import ScreenShell from "../ui/ScreenShell";
+import GlassCard from "../ui/GlassCard";
+import { theme } from "../ui/theme";
+import { stopRinging } from "../services/alarmEngine";
 
 export default function ProofTaskScreen({ navigation, route }) {
-  const { proofMethod, round, userName } = route.params;
-  
-  const requiredSteps = {
-    1: 30,
-    2: 15,
-    3: 5,
-  };
-  
+  const params = route?.params || {};
+  const { round = 1, proofMethod = "steps" } = params;
+
+  // ---- TASK CONFIG
+  const TARGET_STEPS = 30;
+
+  // ---- STATE
+  const [isAvailable, setIsAvailable] = useState(null); // null | true | false
   const [steps, setSteps] = useState(0);
-  const [progressAnim] = useState(new Animated.Value(0));
-  const [runAnim] = useState(new Animated.Value(0));
-  const [fadeAnim] = useState(new Animated.Value(0));
-  const required = requiredSteps[round];
+  const [status, setStatus] = useState("Counting steps…");
+  const [fallbackReady, setFallbackReady] = useState(false);
 
-  // Step detection with improved sensitivity
+  const pedometerSubRef = useRef(null);
+  const baseRef = useRef(0);
+  const finishedRef = useRef(false);
+
+  // Short title depending on proof method (future-proof)
+  const taskTitle = useMemo(() => {
+    if (proofMethod === "steps") return `Walk ${TARGET_STEPS} steps`;
+    return "Complete the challenge";
+  }, [proofMethod]);
+
+  // ---- ALWAYS SILENCE ALARM AUDIO/SPEECH/VIBRATION ON THIS SCREEN
   useEffect(() => {
-    let lastY = 0;
-    let lastZ = 0;
-    const STEP_THRESHOLD = 0.15;
-    const TIME_BETWEEN_STEPS = 300;
-    let lastStepTime = 0;
-
-    const subscription = Accelerometer.addListener(({ x, y, z }) => {
-      const now = Date.now();
-      
-      const deltaY = Math.abs(y - lastY);
-      const deltaZ = Math.abs(z - lastZ);
-      const delta = Math.max(deltaY, deltaZ);
-
-      if (delta > STEP_THRESHOLD && now - lastStepTime > TIME_BETWEEN_STEPS) {
-        lastStepTime = now;
-        
-        setSteps((prev) => {
-          const newSteps = Math.min(prev + 1, required);
-          if (newSteps < required) {
-            Vibration.vibrate(50);
-          }
-          console.log(`Step detected! Total: ${newSteps}/${required}`);
-          return newSteps;
-        });
-      }
-
-      lastY = y;
-      lastZ = z;
-    });
-
-    Accelerometer.setUpdateInterval(100);
-
-    return () => subscription.remove();
+    stopRinging();
+    Speech.stop();
+    Vibration.cancel();
   }, []);
 
-  // Animations
+  // ---- PEDOMETER
   useEffect(() => {
-    // Fade in
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 600,
-      useNativeDriver: true,
-    }).start();
+    let fallbackTimer;
 
-    // Progress bar animation
-    Animated.timing(progressAnim, {
-      toValue: steps / required,
-      duration: 300,
-      useNativeDriver: false,
-    }).start();
+    const start = async () => {
+      try {
+        const available = await Pedometer.isAvailableAsync();
+        setIsAvailable(available);
 
-    // Eddy running animation (left-right bounce)
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(runAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(runAnim, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-
-    // Navigate when complete
-    if (steps >= required) {
-      Vibration.vibrate([100, 100, 100]);
-      Speech.speak(`Great job ${userName}! Eddy's lightbulb is powered up!`);
-      
-      setTimeout(() => {
-        if (round < 3) {
-          navigation.navigate('RoundComplete', route.params);
-        } else {
-          navigation.navigate('Success', route.params);
+        if (!available) {
+          setStatus("Step counting not available on this device.");
+          // fallback: allow completion after a short “up time”
+          fallbackTimer = setTimeout(() => setFallbackReady(true), 3500);
+          return;
         }
-      }, 1500);
+
+        setStatus("Start walking now.");
+        baseRef.current = 0;
+        setSteps(0);
+
+        // Prime base using a short historical query (prevents jumping)
+        // Note: Pedometer.getStepCountAsync uses date range; not supported on all Android devices.
+        if (Platform.OS !== "android") {
+          try {
+            const end = new Date();
+            const startDate = new Date(end.getTime() - 60 * 1000); // last 60s
+            const res = await Pedometer.getStepCountAsync(startDate, end);
+            baseRef.current = res?.steps ?? 0;
+          } catch {
+            baseRef.current = 0;
+          }
+        }
+
+        pedometerSubRef.current = Pedometer.watchStepCount((result) => {
+          // On iOS this is session-based; on Android it may be since boot depending on device.
+          // Using baseRef makes it behave like a “session challenge” when possible.
+          const raw = result?.steps ?? 0;
+          const normalized = Math.max(0, raw - baseRef.current);
+
+          setSteps(normalized);
+
+          if (normalized >= TARGET_STEPS && !finishedRef.current) {
+            finishedRef.current = true;
+            onComplete();
+          }
+        });
+      } catch (e) {
+        setIsAvailable(false);
+        setStatus("Couldn’t start step tracking.");
+        fallbackTimer = setTimeout(() => setFallbackReady(true), 3500);
+      }
+    };
+
+    start();
+
+    return () => {
+      if (pedometerSubRef.current) {
+        pedometerSubRef.current.remove();
+        pedometerSubRef.current = null;
+      }
+      if (fallbackTimer) clearTimeout(fallbackTimer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const onComplete = () => {
+    // ensure silence (again)
+    stopRinging();
+    Speech.stop();
+    Vibration.cancel();
+
+    // Navigate based on round
+    if (round >= 3) {
+      navigation.navigate("Success");
+    } else {
+      navigation.navigate("RoundComplete", { ...params, round });
     }
-  }, [steps]);
+  };
 
-  const progressWidth = progressAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0%', '100%'],
-  });
+  const onFallbackConfirm = () => {
+    Alert.alert(
+      "Confirm",
+      "Are you up and moving?",
+      [
+        { text: "Not yet", style: "cancel" },
+        { text: "Yes", onPress: onComplete },
+      ],
+      { cancelable: true }
+    );
+  };
 
-  const runTranslate = runAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 8],
-  });
+  const progress = Math.min(1, steps / TARGET_STEPS);
+  const progressPct = Math.round(progress * 100);
 
   return (
-    <LinearGradient colors={['#4158D0', '#C850C0']} style={styles.container}>
-      <View style={styles.content}>
-        {/* Eddy Running */}
-        <Animated.View 
-          style={[
-            styles.eddyContainer,
-            { 
-              opacity: fadeAnim,
-              transform: [{ translateX: runTranslate }] 
-            }
-          ]}
-        >
-          <Image
-            source={require('../assets/eddy/eddy-running.png')}
-            style={styles.eddyImage}
-            contentFit="contain"
-          />
-          <Text style={styles.eddyName}>Powering up Eddy!</Text>
-          <Text style={styles.eddySubtext}>Keep walking! ⚡</Text>
-        </Animated.View>
+    <ScreenShell variant="alarm">
+      <View style={styles.wrap}>
+        <View style={styles.center}>
+          <Text style={styles.kicker}>PROOF TASK</Text>
+          <Text style={styles.title}>{taskTitle}</Text>
 
-        {/* Title */}
-        <Text style={styles.title}>Walk {required} Steps</Text>
-        <Text style={styles.subtitle}>Round {round} of 3</Text>
+          <GlassCard style={styles.card}>
+            <Text style={styles.bigNumber}>
+              {isAvailable ? `${steps}/${TARGET_STEPS}` : "—"}
+            </Text>
+            <Text style={styles.sub}>
+              {isAvailable ? `${progressPct}% complete` : status}
+            </Text>
 
-        {/* Counter */}
-        <View style={styles.counterBox}>
-          <Text style={styles.counter}>{steps}</Text>
-          <Text style={styles.counterSlash}>/</Text>
-          <Text style={styles.counterGoal}>{required}</Text>
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, { width: `${progressPct}%` }]} />
+            </View>
+
+            <Text style={styles.helper}>{status}</Text>
+          </GlassCard>
+
+          {/* Fallback if pedometer not available */}
+          {isAvailable === false && (
+            <GlassCard style={styles.fallbackCard}>
+              <Text style={styles.fallbackTitle}>No step counter detected</Text>
+              <Text style={styles.fallbackText}>
+                Some devices can’t count steps in Expo Go. You can still continue after a short check.
+              </Text>
+
+              <TouchableOpacity
+                activeOpacity={0.9}
+                style={[styles.fallbackBtn, !fallbackReady && { opacity: 0.5 }]}
+                disabled={!fallbackReady}
+                onPress={onFallbackConfirm}
+              >
+                <Text style={styles.fallbackBtnText}>
+                  {fallbackReady ? "I’m up" : "Preparing…"}
+                </Text>
+              </TouchableOpacity>
+            </GlassCard>
+          )}
         </View>
 
-        {/* Progress Bar */}
-        <View style={styles.progressContainer}>
-          <View style={styles.progressBar}>
-            <Animated.View
-              style={[
-                styles.progressFill,
-                { width: progressWidth }
-              ]}
-            />
-          </View>
-          <Text style={styles.progressText}>
-            {Math.round((steps / required) * 100)}% Charged
-          </Text>
-        </View>
-
-        {/* Instructions */}
-        <View style={styles.instructionBox}>
-          <Text style={styles.instructionIcon}>👟</Text>
-          <Text style={styles.instructionText}>
-            {steps < required
-              ? 'Keep walking to power the lightbulb!'
-              : 'Perfect! Lightbulb fully charged! ✨'}
-          </Text>
-        </View>
+        {/* Manual “I did it” button if you want (hidden by default when pedometer works) */}
+        {isAvailable === true && (
+          <TouchableOpacity
+            activeOpacity={0.92}
+            style={[styles.cta, steps < TARGET_STEPS && { opacity: 0.35 }]}
+            disabled={steps < TARGET_STEPS}
+            onPress={onComplete}
+          >
+            <Text style={styles.ctaText}>COMPLETE</Text>
+            <Text style={styles.ctaArrow}>→</Text>
+          </TouchableOpacity>
+        )}
       </View>
-    </LinearGradient>
+    </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: {
+  wrap: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 30,
+    paddingBottom: 110,
   },
-  eddyContainer: {
-    alignItems: 'center',
-    marginBottom: 30,
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: theme.space.xl,
+    gap: 12,
   },
-  eddyImage: {
-    width: 180,
-    height: 180,
-    marginBottom: 12,
-  },
-  eddyName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#ffffff',
-    marginBottom: 4,
-  },
-  eddySubtext: {
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.85)',
-    fontStyle: 'italic',
+  kicker: {
+    color: theme.colors.textFaint,
+    fontWeight: "900",
+    letterSpacing: 2,
+    fontSize: 12,
   },
   title: {
-    fontSize: 36,
-    fontWeight: '900',
-    color: '#ffffff',
-    marginBottom: 10,
+    color: theme.colors.text,
+    fontSize: 34,
+    fontWeight: "900",
+    textAlign: "center",
+    letterSpacing: -0.6,
+    marginBottom: 6,
   },
-  subtitle: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginBottom: 40,
-    fontWeight: '600',
+  card: {
+    width: "100%",
+    paddingVertical: 18,
+    alignItems: "center",
   },
-  counterBox: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    marginBottom: 40,
+  bigNumber: {
+    color: theme.colors.text,
+    fontWeight: "900",
+    fontSize: 46,
+    letterSpacing: -1.2,
   },
-  counter: {
-    fontSize: 80,
-    fontWeight: '900',
-    color: '#ffffff',
+  sub: {
+    color: theme.colors.textMuted,
+    fontWeight: "800",
+    fontSize: 14,
+    marginTop: 2,
+    marginBottom: 14,
   },
-  counterSlash: {
-    fontSize: 40,
-    color: 'rgba(255, 255, 255, 0.5)',
-    marginHorizontal: 10,
-  },
-  counterGoal: {
-    fontSize: 50,
-    fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.7)',
-  },
-  progressContainer: {
-    width: '100%',
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  progressBar: {
-    width: '100%',
-    height: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 8,
-    overflow: 'hidden',
-    marginBottom: 12,
+  progressTrack: {
+    width: "100%",
+    height: 12,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.14)",
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.18)",
   },
   progressFill: {
-    height: '100%',
-    backgroundColor: '#00FF88',
-    borderRadius: 8,
+    height: "100%",
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.75)",
   },
-  progressText: {
+  helper: {
+    marginTop: 12,
+    color: theme.colors.textFaint,
+    fontWeight: "800",
+    fontSize: 13,
+    textAlign: "center",
+  },
+  fallbackCard: {
+    width: "100%",
+    marginTop: 10,
+    paddingVertical: 16,
+  },
+  fallbackTitle: {
+    color: theme.colors.text,
+    fontWeight: "900",
     fontSize: 18,
-    fontWeight: '700',
-    color: '#ffffff',
+    marginBottom: 6,
+    textAlign: "center",
   },
-  instructionBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    padding: 20,
+  fallbackText: {
+    color: theme.colors.textMuted,
+    fontWeight: "700",
+    fontSize: 13,
+    textAlign: "center",
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+  fallbackBtn: {
+    height: 52,
     borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.92)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.06)",
   },
-  instructionIcon: {
-    fontSize: 32,
-    marginRight: 15,
+  fallbackBtnText: {
+    color: "#111",
+    fontWeight: "900",
+    letterSpacing: 1.1,
   },
-  instructionText: {
-    fontSize: 15,
-    color: '#ffffff',
-    fontWeight: '600',
-    flex: 1,
-    lineHeight: 22,
+  cta: {
+    position: "absolute",
+    left: theme.space.xl,
+    right: theme.space.xl,
+    bottom: 26,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.95)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 14,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.06)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  ctaText: {
+    color: "#111",
+    fontWeight: "900",
+    fontSize: 18,
+    letterSpacing: 1.2,
+  },
+  ctaArrow: {
+    color: "#111",
+    fontSize: 22,
+    fontWeight: "900",
   },
 });

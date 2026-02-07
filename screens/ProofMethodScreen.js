@@ -1,168 +1,106 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+// screens/ProofMethodScreen.js
+import React, { useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
+
+import ScreenShell from "../ui/ScreenShell";
+import GlassCard from "../ui/GlassCard";
+import { theme } from "../ui/theme";
 
 export default function ProofMethodScreen({ navigation, route }) {
-  const [selectedMethod, setSelectedMethod] = useState('steps');
+  const [selectedMethod, setSelectedMethod] = useState("steps");
 
   const methods = [
-    { id: 'steps', icon: '👟', name: 'Walk Steps', desc: 'Take 30 steps' },
-    { id: 'camera', icon: '📸', name: 'Hand Wave', desc: 'Wave at camera' },
+    { id: "steps", icon: "👟", name: "Walk Steps", desc: "Take steps with your phone" },
+    { id: "camera", icon: "📸", name: "Hand Wave", desc: "Wave at the camera" },
   ];
 
   return (
-    <LinearGradient colors={['#0a0e27', '#1a1f3a', '#2a2f4a']} style={styles.container}>
+    <ScreenShell variant="base">
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>←</Text>
+          <Text style={styles.back}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.stepIndicator}>Step 3 of 4</Text>
+        <Text style={styles.step}>Step 3 of 4</Text>
       </View>
 
-      <ScrollView style={styles.content}>
-        <Text style={styles.title}>How do you want{'\n'}to prove you're awake?</Text>
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.h1}>How do you want{`\n`}to prove you’re awake?</Text>
 
-        {methods.map((method) => (
-          <TouchableOpacity
-            key={method.id}
-            style={[
-              styles.methodCard,
-              selectedMethod === method.id && styles.methodCardActive,
-            ]}
-            onPress={() => setSelectedMethod(method.id)}
-          >
-            <Text style={styles.methodIcon}>{method.icon}</Text>
-            <View style={styles.methodInfo}>
-              <Text style={styles.methodName}>{method.name}</Text>
-              <Text style={styles.methodDesc}>{method.desc}</Text>
-            </View>
-            <View
-              style={[
-                styles.radio,
-                selectedMethod === method.id && styles.radioActive,
-              ]}
-            />
-          </TouchableOpacity>
-        ))}
+        <View style={{ gap: 12, marginTop: 14 }}>
+          {methods.map((m) => {
+            const active = selectedMethod === m.id;
+            return (
+              <TouchableOpacity key={m.id} activeOpacity={0.9} onPress={() => setSelectedMethod(m.id)}>
+                <GlassCard style={[styles.method, active && styles.methodActive]}>
+                  <Text style={styles.icon}>{m.icon}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.name}>{m.name}</Text>
+                    <Text style={styles.desc}>{m.desc}</Text>
+                  </View>
+                  <View style={[styles.radio, active && styles.radioOn]} />
+                </GlassCard>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        <View style={{ height: 90 }} />
       </ScrollView>
 
       <TouchableOpacity
-        style={styles.nextButton}
+        style={styles.cta}
+        activeOpacity={0.9}
         onPress={() => {
-          console.log('✅ Navigating to AlarmSet with proofMethod:', selectedMethod);
-          navigation.navigate('AlarmSet', { 
-            ...route.params, 
+          navigation.navigate("AlarmSet", {
+            ...route.params,
             proofMethod: selectedMethod,
-            round: 1, // Start at round 1
+            round: route.params?.round ?? 1,
           });
         }}
       >
-        <LinearGradient
-          colors={['#4158D0', '#C850C0']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.nextGradient}
-        >
-          <Text style={styles.nextText}>Continue</Text>
-          <Text style={styles.nextArrow}>→</Text>
-        </LinearGradient>
+        <Text style={styles.ctaText}>Continue</Text>
+        <Text style={styles.ctaArrow}>→</Text>
       </TouchableOpacity>
-    </LinearGradient>
+    </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 30,
-    paddingTop: 60,
-    paddingBottom: 20,
-  },
-  backButton: {
-    fontSize: 32,
-    color: '#ffffff',
-  },
-  stepIndicator: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.5)',
-    fontWeight: '500',
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 30,
-  },
-  title: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: '#ffffff',
-    marginBottom: 30,
-    lineHeight: 44,
-  },
-  methodCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-  },
-  methodCardActive: {
-    borderColor: '#4158D0',
-    backgroundColor: 'rgba(65, 88, 208, 0.1)',
-  },
-  methodIcon: {
-    fontSize: 48,
-    marginRight: 20,
-  },
-  methodInfo: {
-    flex: 1,
-  },
-  methodName: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#ffffff',
-    marginBottom: 4,
-  },
-  methodDesc: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.6)',
-  },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  back: { color: theme.colors.text, fontSize: 30, fontWeight: "700" },
+  step: { color: theme.colors.textFaint, fontWeight: "800" },
+
+  content: { paddingBottom: 20 },
+  h1: { color: theme.colors.text, fontSize: 38, fontWeight: "900", letterSpacing: -1, lineHeight: 44 },
+
+  method: { flexDirection: "row", alignItems: "center", gap: 14 },
+  methodActive: { borderColor: "rgba(255,255,255,0.30)", backgroundColor: "rgba(255,255,255,0.14)" },
+  icon: { fontSize: 38 },
+  name: { color: theme.colors.text, fontWeight: "900", fontSize: 18 },
+  desc: { color: theme.colors.textFaint, fontWeight: "700", marginTop: 4 },
+
   radio: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: "rgba(255,255,255,0.35)",
   },
-  radioActive: {
-    borderColor: '#4158D0',
-    backgroundColor: '#4158D0',
+  radioOn: { backgroundColor: "rgba(255,255,255,0.85)", borderColor: "rgba(255,255,255,0.85)" },
+
+  cta: {
+    position: "absolute",
+    left: theme.space.xl,
+    right: theme.space.xl,
+    bottom: theme.space.xl,
+    height: 62,
+    borderRadius: theme.radius.xl,
+    backgroundColor: "rgba(255,255,255,0.90)",
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 10,
   },
-  nextButton: {
-    marginHorizontal: 30,
-    marginBottom: 50,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  nextGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 20,
-  },
-  nextText: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#ffffff',
-    marginRight: 10,
-  },
-  nextArrow: {
-    fontSize: 24,
-    color: '#ffffff',
-  },
+  ctaText: { color: theme.colors.buttonTextDark, fontWeight: "900", fontSize: 18 },
+  ctaArrow: { color: theme.colors.buttonTextDark, fontWeight: "900", fontSize: 20 },
 });

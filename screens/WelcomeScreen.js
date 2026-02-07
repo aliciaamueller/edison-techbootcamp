@@ -1,186 +1,176 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+// screens/WelcomeScreen.js
+import React from "react";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
 
-const { width, height } = Dimensions.get('window');
+import ScreenShell from "../ui/ScreenShell";
+import GlassCard from "../ui/GlassCard";
+import { theme } from "../ui/theme";
 
 export default function WelcomeScreen({ navigation }) {
   return (
-    <LinearGradient
-      colors={['#0a0e27', '#1a1f3a', '#2a2f4a']}
-      style={styles.container}
-    >
-      <View style={styles.content}>
-        {/* Logo/Icon Area */}
-        <View style={styles.iconContainer}>
-          <View style={styles.iconCircle}>
-            <Text style={styles.iconText}>⚡</Text>
+    <ScreenShell>
+      <View style={styles.wrap}>
+        {/* Eddy hero */}
+        <View style={styles.hero}>
+          <Image
+            source={require("../assets/eddy/eddy-happy.png")}
+            style={styles.eddy}
+            contentFit="contain"
+          />
+
+          {/* Punch phrase */}
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>You snooze, you lose.</Text>
           </View>
+
+          <Text style={styles.brand}>Edison</Text>
+          <Text style={styles.tagline}>Wake up. Prove it. Stay awake.</Text>
         </View>
 
-        {/* Main Headline */}
-        <Text style={styles.mainTitle}>Edison</Text>
-        <Text style={styles.tagline}>Turn waking up into a confirmed state</Text>
-
-        {/* Core Promise */}
-        <View style={styles.promiseContainer}>
-          <View style={styles.promiseLine} />
-          <Text style={styles.promiseText}>
-            This alarm checks if you're actually awake.{'\n'}
-            Not just once. Three times.
+        <GlassCard>
+          <Text style={styles.cardTitle}>Triple verification</Text>
+          <Text style={styles.cardBody}>
+            This alarm doesn’t just wake you up — it checks again (3 rounds) to
+            make sure you stayed awake.
           </Text>
-          <View style={styles.promiseLine} />
-        </View>
 
-        {/* Feature Pills */}
-        <View style={styles.featuresContainer}>
-          <View style={styles.featurePill}>
-            <Text style={styles.featureIcon}>🔒</Text>
-            <Text style={styles.featureText}>Can't snooze</Text>
+          <View style={styles.pills}>
+            <View style={styles.pill}>
+              <Text style={styles.pillIcon}>🔒</Text>
+              <Text style={styles.pillText}>No snooze</Text>
+            </View>
+            <View style={styles.pill}>
+              <Text style={styles.pillIcon}>🎯</Text>
+              <Text style={styles.pillText}>3 rounds</Text>
+            </View>
+            <View style={styles.pill}>
+              <Text style={styles.pillIcon}>💡</Text>
+              <Text style={styles.pillText}>Eddy powered</Text>
+            </View>
           </View>
-          <View style={styles.featurePill}>
-            <Text style={styles.featureIcon}>🎯</Text>
-            <Text style={styles.featureText}>Triple verification</Text>
-          </View>
-          <View style={styles.featurePill}>
-            <Text style={styles.featureIcon}>🧠</Text>
-            <Text style={styles.featureText}>Smart confirmation</Text>
-          </View>
-        </View>
-      </View>
+        </GlassCard>
 
-      {/* Bottom CTA */}
-      <TouchableOpacity 
-        style={styles.ctaButton}
-        onPress={() => navigation.navigate('SetTime')}
-        activeOpacity={0.9}
-      >
-        <LinearGradient
-          colors={['#4158D0', '#C850C0']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.ctaGradient}
+        <TouchableOpacity
+          style={styles.cta}
+          activeOpacity={0.9}
+          onPress={() => navigation.navigate("SetTime")}
         >
-          <Text style={styles.ctaText}>Set Up Alarm</Text>
-          <Text style={styles.ctaArrow}>→</Text>
-        </LinearGradient>
-      </TouchableOpacity>
-    </LinearGradient>
+          <LinearGradient
+            colors={[theme.colors.accent2, theme.colors.accent]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.ctaGrad}
+          >
+            <Text style={styles.ctaText}>Set up alarm</Text>
+            <Text style={styles.ctaArrow}>→</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
+    </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'space-between',
+  wrap: { flex: 1, justifyContent: "space-between", paddingBottom: 14 },
+
+  hero: {
+    alignItems: "center",
+    paddingTop: 26,
+    paddingBottom: 10,
   },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 30,
-  },
-  iconContainer: {
-    marginBottom: 30,
-  },
-  iconCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: 'rgba(65, 88, 208, 0.2)',
-    borderWidth: 2,
-    borderColor: 'rgba(65, 88, 208, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  iconText: {
-    fontSize: 50,
-  },
-  mainTitle: {
-    fontSize: 56,
-    fontWeight: '700',
-    color: '#ffffff',
-    letterSpacing: -2,
+
+  eddy: { width: 170, height: 170, marginBottom: 10 },
+
+  badge: {
+    backgroundColor: "rgba(255,255,255,0.14)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.20)",
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 999,
     marginBottom: 10,
   },
+  badgeText: {
+    color: theme.colors.text,
+    fontWeight: "900",
+    letterSpacing: 0.2,
+    fontSize: 13,
+  },
+
+  brand: {
+    fontSize: 48,
+    fontWeight: "900",
+    color: theme.colors.text,
+    letterSpacing: -1.5,
+  },
+
   tagline: {
+    marginTop: 8,
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.6)',
-    textAlign: 'center',
-    marginBottom: 50,
-    fontWeight: '400',
+    color: theme.colors.textMuted,
+    fontWeight: "600",
   },
-  promiseContainer: {
-    alignItems: 'center',
-    marginBottom: 40,
+
+  cardTitle: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: theme.colors.text,
+    marginBottom: 8,
   },
-  promiseLine: {
-    width: 40,
-    height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    marginVertical: 20,
+
+  cardBody: {
+    fontSize: 15,
+    color: theme.colors.textMuted,
+    lineHeight: 22,
+    fontWeight: "600",
   },
-  promiseText: {
-    fontSize: 20,
-    color: '#ffffff',
-    textAlign: 'center',
-    lineHeight: 30,
-    fontWeight: '500',
-    paddingHorizontal: 20,
+
+  pills: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginTop: 14,
   },
-  featuresContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 12,
-    marginTop: 20,
-  },
-  featurePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+
+  pill: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 20,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.08)",
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: "rgba(255,255,255,0.14)",
   },
-  featureIcon: {
-    fontSize: 16,
-    marginRight: 8,
+
+  pillIcon: { marginRight: 8, fontSize: 14 },
+  pillText: { color: theme.colors.text, fontWeight: "800", fontSize: 13 },
+
+  cta: {
+    borderRadius: theme.radius.xl,
+    overflow: "hidden",
+    marginTop: 14,
   },
-  featureText: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontWeight: '500',
+
+  ctaGrad: {
+    paddingVertical: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 10,
   },
-  ctaButton: {
-    marginHorizontal: 30,
-    marginBottom: 50,
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#4158D0',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  ctaGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 20,
-    paddingHorizontal: 40,
-  },
+
   ctaText: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#ffffff',
-    marginRight: 10,
+    color: theme.colors.buttonTextDark,
+    fontSize: 18,
+    fontWeight: "900",
   },
+
   ctaArrow: {
-    fontSize: 24,
-    color: '#ffffff',
-    fontWeight: '300',
+    color: theme.colors.buttonTextDark,
+    fontSize: 20,
+    fontWeight: "900",
   },
 });
