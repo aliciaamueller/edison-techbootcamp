@@ -20,6 +20,9 @@ export default function ReasonScreen({ navigation, route }) {
   const [userName, setUserName] = useState("");
   const [selectedGenre, setSelectedGenre] = useState("energetic");
   const [selectedPersonality, setSelectedPersonality] = useState("motivational");
+  const [selectedIntervalMinutes, setSelectedIntervalMinutes] = useState(5);
+  const [isCustomInterval, setIsCustomInterval] = useState(false);
+  const [customIntervalInput, setCustomIntervalInput] = useState("5");
 
   const examples = [
     { icon: "📚", text: "8 a.m. class and attendance matters" },
@@ -42,16 +45,62 @@ export default function ReasonScreen({ navigation, route }) {
     { id: "zen", name: "Zen", icon: "🧘", desc: "Calm focus" },
   ];
 
+  const intervalOptions = [
+    { value: 3, label: "3 min" },
+    { value: 5, label: "5 min" },
+    { value: 10, label: "10 min" },
+    { value: 15, label: "15 min" },
+  ];
+
+  // Clamp interval to valid range (3-3600 minutes)
+  const clampIntervalMinutes = (value) => {
+    const num = parseInt(value, 10);
+    if (isNaN(num) || num < 3) return 3;
+    if (num > 3600) return 3600;
+    return num;
+  };
+
+  // Get the effective interval in minutes
+  const getEffectiveIntervalMinutes = () => {
+    if (isCustomInterval) {
+      return clampIntervalMinutes(customIntervalInput);
+    }
+    return selectedIntervalMinutes;
+  };
+
+  // Check if custom input is valid
+  const isCustomInputValid = () => {
+    if (!isCustomInterval) return true;
+    const num = parseInt(customIntervalInput, 10);
+    return !isNaN(num) && customIntervalInput.trim() !== "";
+  };
+
+  // Show helper text for custom input
+  const getCustomHelperText = () => {
+    if (!isCustomInterval) return null;
+    const num = parseInt(customIntervalInput, 10);
+    if (isNaN(num) || customIntervalInput.trim() === "") {
+      return "Please enter a valid number";
+    }
+    if (num < 3) {
+      return "Minimum is 3 minutes (will be set to 3)";
+    }
+    if (num > 3600) {
+      return "Maximum is 3600 minutes (will be set to 3600)";
+    }
+    return null;
+  };
+
   const preview =
     selectedPersonality === "sassy"
       ? `"Wake up ${userName || "you"}! Time to stop dreaming about ${reason || "success"} and do it!"`
       : selectedPersonality === "drill-sergeant"
-      ? `"UP NOW ${userName || "you"}! You signed up for ${reason || "this"}. MOVE!"`
-      : selectedPersonality === "zen"
-      ? `"Good morning ${userName || "you"}. Today brings ${reason || "new opportunities"}. Breathe and begin."`
-      : `"Rise and shine ${userName || "you"}! Today you're crushing ${reason || "your goals"}. Let's go!"`;
+        ? `"UP NOW ${userName || "you"}! You signed up for ${reason || "this"}. MOVE!"`
+        : selectedPersonality === "zen"
+          ? `"Good morning ${userName || "you"}. Today brings ${reason || "new opportunities"}. Breathe and begin."`
+          : `"Rise and shine ${userName || "you"}! Today you're crushing ${reason || "your goals"}. Let's go!"`;
 
-  const canContinue = !!userName && !!reason;
+  const canContinue = !!userName && !!reason && isCustomInputValid();
 
   return (
     <ScreenShell variant="base">
@@ -143,6 +192,56 @@ export default function ReasonScreen({ navigation, route }) {
             })}
           </View>
 
+          <Text style={[styles.sectionTitle, { marginTop: 18 }]}>Check-in interval</Text>
+          <View style={styles.grid}>
+            {intervalOptions.map((opt) => {
+              const active = !isCustomInterval && selectedIntervalMinutes === opt.value;
+              return (
+                <TouchableOpacity
+                  key={opt.value}
+                  activeOpacity={0.9}
+                  onPress={() => {
+                    setIsCustomInterval(false);
+                    setSelectedIntervalMinutes(opt.value);
+                  }}
+                  style={[styles.cardPick, active && styles.cardPickActive]}
+                >
+                  <Text style={styles.pickIcon}>⏱</Text>
+                  <Text style={styles.pickTitle}>{opt.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => setIsCustomInterval(true)}
+              style={[styles.cardPick, isCustomInterval && styles.cardPickActive]}
+            >
+              <Text style={styles.pickIcon}>✏️</Text>
+              <Text style={styles.pickTitle}>Custom</Text>
+            </TouchableOpacity>
+          </View>
+
+          {isCustomInterval && (
+            <GlassCard style={{ marginTop: 12 }}>
+              <Text style={styles.label}>Custom interval (minutes)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. 7"
+                placeholderTextColor="rgba(255,255,255,0.40)"
+                value={customIntervalInput}
+                onChangeText={setCustomIntervalInput}
+                keyboardType="numeric"
+              />
+              {getCustomHelperText() && (
+                <Text style={styles.helperText}>{getCustomHelperText()}</Text>
+              )}
+            </GlassCard>
+          )}
+
+          <Text style={styles.intervalNote}>
+            Minimum 3 minutes. For demo the app uses a shorter internal timer.
+          </Text>
+
           {(userName || reason) && (
             <GlassCard style={{ marginTop: 18 }}>
               <Text style={styles.label}>Sample AI message</Text>
@@ -160,12 +259,15 @@ export default function ReasonScreen({ navigation, route }) {
           style={[styles.cta, !canContinue && { opacity: 0.55 }]}
           onPress={() => {
             if (!canContinue) return;
+            const intervalSeconds = getEffectiveIntervalMinutes() * 60;
+            console.log("intervalSeconds ->", intervalSeconds);
             navigation.navigate("ProofMethod", {
               ...route.params, // contains time + days
               userName,
               reason,
               musicGenre: selectedGenre,
               aiPersonality: selectedPersonality,
+              intervalSeconds,
               round: 1,
             });
           }}
@@ -240,4 +342,19 @@ const styles = StyleSheet.create({
   },
   ctaText: { color: theme.colors.buttonTextDark, fontWeight: "900", fontSize: 18 },
   ctaArrow: { color: theme.colors.buttonTextDark, fontWeight: "900", fontSize: 20 },
+
+  helperText: {
+    color: theme.colors.textMuted,
+    fontWeight: "700",
+    fontSize: 13,
+    marginTop: 8,
+  },
+
+  intervalNote: {
+    color: theme.colors.textFaint,
+    fontWeight: "700",
+    fontSize: 12,
+    marginTop: 10,
+    fontStyle: "italic",
+  },
 });

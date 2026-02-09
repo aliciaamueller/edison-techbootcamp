@@ -1,6 +1,6 @@
 // screens/ProofTaskScreen.js
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Vibration, Alert } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Vibration, Alert, Animated } from "react-native";
 import { Pedometer } from "expo-sensors";
 import * as Speech from "expo-speech";
 
@@ -11,16 +11,31 @@ import { stopRinging } from "../services/alarmEngine";
 
 export default function ProofTaskScreen({ navigation, route }) {
   const params = route?.params || {};
-  const { round = 1, proofMethod = "steps" } = params;
+  const { round = 1, proofMethod = "steps", demoMode = false, demoRequiredSteps = [] } = params;
 
   // ---- TASK CONFIG
-  const TARGET_STEPS = 30;
+  // In demo mode, use demoRequiredSteps[round-1], otherwise use round-based progression
+  const TARGET_STEPS = useMemo(() => {
+    if (demoMode && demoRequiredSteps.length > 0) {
+      const index = round - 1;
+      return demoRequiredSteps[index] ?? 30; // Fallback to 30 if index out of bounds
+    }
+    // Original behavior: round 1 → 30, round 2 → 15, round 3 → 5
+    if (round === 1) return 30;
+    if (round === 2) return 15;
+    if (round === 3) return 5;
+    return 30; // Fallback for unexpected rounds
+  }, [demoMode, demoRequiredSteps, round]);
 
   // ---- STATE
   const [isAvailable, setIsAvailable] = useState(null); // null | true | false
   const [steps, setSteps] = useState(0);
   const [status, setStatus] = useState("Counting steps…");
   const [fallbackReady, setFallbackReady] = useState(false);
+
+  // ---- ANIMATION VALUES
+  const runAnim = useRef(new Animated.Value(0)).current;
+  const progressAnim = useRef(new Animated.Value(0)).current;
 
   const pedometerSubRef = useRef(null);
   const baseRef = useRef(0);
@@ -30,7 +45,7 @@ export default function ProofTaskScreen({ navigation, route }) {
   const taskTitle = useMemo(() => {
     if (proofMethod === "steps") return `Walk ${TARGET_STEPS} steps`;
     return "Complete the challenge";
-  }, [proofMethod]);
+  }, [proofMethod, TARGET_STEPS]);
 
   // ---- ALWAYS SILENCE ALARM AUDIO/SPEECH/VIBRATION ON THIS SCREEN
   useEffect(() => {
@@ -38,6 +53,30 @@ export default function ProofTaskScreen({ navigation, route }) {
     Speech.stop();
     Vibration.cancel();
   }, []);
+
+  // ---- CONTINUOUS LOOP ANIMATION (runs once on mount)
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(runAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(runAnim, {
+          toValue: 0,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    loop.start();
+
+    return () => {
+      loop.stop();
+    };
+  }, [runAnim]);
 
   // ---- PEDOMETER
   useEffect(() => {
@@ -79,11 +118,6 @@ export default function ProofTaskScreen({ navigation, route }) {
           const normalized = Math.max(0, raw - baseRef.current);
 
           setSteps(normalized);
-
-          if (normalized >= TARGET_STEPS && !finishedRef.current) {
-            finishedRef.current = true;
-            onComplete();
-          }
         });
       } catch (e) {
         setIsAvailable(false);
@@ -103,6 +137,24 @@ export default function ProofTaskScreen({ navigation, route }) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ---- PROGRESS ANIMATION & NAVIGATION (responds to steps changes)
+  useEffect(() => {
+    const progress = Math.min(1, steps / TARGET_STEPS);
+
+    // Animate progress bar
+    Animated.timing(progressAnim, {
+      toValue: progress,
+      duration: 300,
+      useNativeDriver: false, // width animation requires false
+    }).start();
+
+    // Navigate when target reached
+    if (steps >= TARGET_STEPS && !finishedRef.current) {
+      finishedRef.current = true;
+      onComplete();
+    }
+  }, [steps, progressAnim, TARGET_STEPS]);
 
   const onComplete = () => {
     // ensure silence (again)
@@ -149,7 +201,17 @@ export default function ProofTaskScreen({ navigation, route }) {
             </Text>
 
             <View style={styles.progressTrack}>
-              <View style={[styles.progressFill, { width: `${progressPct}%` }]} />
+              <Animated.View
+                style={[
+                  styles.progressFill,
+                  {
+                    width: progressAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0%', '100%']
+                    })
+                  }
+                ]}
+              />
             </View>
 
             <Text style={styles.helper}>{status}</Text>

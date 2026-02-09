@@ -17,6 +17,10 @@ export default function AlarmSetScreen({ navigation, route }) {
       navigation.navigate("AlarmRinging", {
         ...params,
         time: timeString,
+        demoMode: true,
+        intervalSeconds: 20,
+        totalRounds: 3,
+        demoRequiredSteps: [10, 6, 4],
       });
     }, 2500);
 

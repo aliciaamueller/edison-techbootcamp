@@ -7,8 +7,8 @@ import GlassCard from "../ui/GlassCard";
 import { theme } from "../ui/theme";
 
 export default function RoundCompleteScreen({ navigation, route }) {
-  const { round = 1 } = route.params || {};
-  const [timeLeft, setTimeLeft] = useState(300);
+  const { round = 1, intervalSeconds = 300 } = route.params || {};
+  const [timeLeft, setTimeLeft] = useState(intervalSeconds);
 
   useEffect(() => {
     const timer = setInterval(() => {
