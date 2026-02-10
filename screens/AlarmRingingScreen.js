@@ -12,7 +12,7 @@ import { startRinging, stopRinging } from "../services/alarmEngine";
 import { setAlarmVolume } from "../services/soundManager";
 
 // ─────────────────────────────────────────────────────────────
-// AI MESSAGE TEMPLATES (multiple per personality)
+// AI MESSAGE TEMPLATES
 // ─────────────────────────────────────────────────────────────
 
 const MESSAGE_TEMPLATES = {
@@ -82,6 +82,7 @@ export default function AlarmRingingScreen({ navigation, route }) {
     round = 1,
     userName = "you",
     reason = "your goals",
+    time = "",
     aiPersonality = "motivational",
     musicGenre = "energetic",
   } = params;
@@ -97,20 +98,19 @@ export default function AlarmRingingScreen({ navigation, route }) {
   const name = userName?.trim() ? userName.trim() : "you";
   const why = reason?.trim() ? reason.trim() : "your goals";
 
-  // ✅ CHANGED: Pick a random message once per round (not per render)
+  // Pick a random message once per round
   const spokenMessage = useMemo(() => {
     return pickRandomMessage(aiPersonality, name, why);
   }, [aiPersonality, name, why, round]);
 
-  // Short UI message only
+  // ✅ FIXED: Show reason properly — don't split on "." (broke "8 a.m.")
+  // Just trim to max ~8 words for display
   const shortReason = useMemo(() => {
     const r = (reason || "").trim();
     if (!r) return "Wake up";
-
-    const first = r.split(/[.!?\n]/)[0].trim();
-    const words = first.split(/\s+/).filter(Boolean);
-    const sliced = words.slice(0, 6).join(" ");
-    return words.length > 6 ? `${sliced}…` : sliced;
+    const words = r.split(/\s+/).filter(Boolean);
+    const sliced = words.slice(0, 8).join(" ");
+    return words.length > 8 ? `${sliced}…` : sliced;
   }, [reason]);
 
   const eddyImage =
@@ -134,13 +134,9 @@ export default function AlarmRingingScreen({ navigation, route }) {
   useEffect(() => {
     isArmedRef.current = true;
 
-    // Start looping alarm sound bed
     startRinging({ musicGenre });
-
-    // Start vibration loop
     Vibration.vibrate([0, 900, 500, 900, 500], true);
 
-    // Speak immediately, then loop every ~9s
     Speech.stop();
     speakOnce();
 
@@ -151,9 +147,6 @@ export default function AlarmRingingScreen({ navigation, route }) {
     return () => {
       isArmedRef.current = false;
       if (loopTimerRef.current) clearInterval(loopTimerRef.current);
-
-      // ✅ CHANGED: We do NOT stop ringing here anymore.
-      // The alarm sound + vibration persist into ProofTaskScreen.
       Speech.stop();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -164,11 +157,9 @@ export default function AlarmRingingScreen({ navigation, route }) {
     if (loopTimerRef.current) clearInterval(loopTimerRef.current);
     Speech.stop();
 
-    // ✅ DO NOT stop alarm sound or vibration here.
     navigation.navigate("ProofTask", { ...params, round });
   };
 
-  // optional volume controls
   const setLow = async () => {
     await setAlarmVolume(0.3);
     setVolumeLabel(30);
@@ -195,7 +186,12 @@ export default function AlarmRingingScreen({ navigation, route }) {
           <Text style={styles.big}>{headline}</Text>
 
           <GlassCard style={styles.reasonCard}>
-            <Text style={styles.reasonLabel}>Today</Text>
+            {/* ✅ FIXED: Show the wake-up time if available */}
+            {time ? (
+              <Text style={styles.reasonLabel}>⏰ {time}</Text>
+            ) : (
+              <Text style={styles.reasonLabel}>TODAY</Text>
+            )}
             <Text style={styles.reasonText}>{shortReason}</Text>
           </GlassCard>
 
@@ -274,7 +270,7 @@ const styles = StyleSheet.create({
   reasonLabel: {
     color: theme.colors.textFaint,
     fontWeight: "900",
-    fontSize: 12,
+    fontSize: 13,
     letterSpacing: 1.5,
     textTransform: "uppercase",
     marginBottom: 8,

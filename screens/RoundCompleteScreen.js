@@ -1,5 +1,5 @@
 // screens/RoundCompleteScreen.js
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { View, Text, StyleSheet } from "react-native";
 
 import ScreenShell from "../ui/ScreenShell";
@@ -9,17 +9,27 @@ import { theme } from "../ui/theme";
 export default function RoundCompleteScreen({ navigation, route }) {
   const { round = 1, intervalSeconds = 300 } = route.params || {};
   const [timeLeft, setTimeLeft] = useState(intervalSeconds);
+  const timeLeftRef = useRef(intervalSeconds);
+
+  // Format interval for display (e.g., "5 minutes", "20 seconds")
+  const intervalLabel = intervalSeconds >= 60
+    ? `${Math.round(intervalSeconds / 60)} minute${Math.round(intervalSeconds / 60) !== 1 ? "s" : ""}`
+    : `${intervalSeconds} seconds`;
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          navigation.navigate("AlarmRinging", { ...route.params, round: round + 1 });
-          return 0;
-        }
-        return prev - 1;
-      });
+      timeLeftRef.current -= 1;
+      const newVal = timeLeftRef.current;
+
+      if (newVal <= 0) {
+        clearInterval(timer);
+        setTimeLeft(0);
+        // Navigate OUTSIDE of setState to fix the React error
+        navigation.navigate("AlarmRinging", { ...route.params, round: round + 1 });
+        return;
+      }
+
+      setTimeLeft(newVal);
     }, 1000);
 
     return () => clearInterval(timer);
@@ -37,7 +47,7 @@ export default function RoundCompleteScreen({ navigation, route }) {
         <Text style={styles.check}>✓</Text>
 
         <Text style={styles.h1}>Round {round} done</Text>
-        <Text style={styles.sub}>Alarm will check again in 5 minutes</Text>
+        <Text style={styles.sub}>Alarm will check again in {intervalLabel}</Text>
 
         <GlassCard style={{ width: "100%", marginTop: 18, alignItems: "center" }}>
           <Text style={styles.timer}>{formatTime(timeLeft)}</Text>
@@ -47,11 +57,9 @@ export default function RoundCompleteScreen({ navigation, route }) {
         <GlassCard style={{ width: "100%", marginTop: 14 }}>
           <Text style={styles.tipTitle}>💤 Stay awake</Text>
           <Text style={styles.tipText}>
-            The alarm will ring again to confirm you didn’t fall back asleep.
+            The alarm will ring again to confirm you didn't fall back asleep.
           </Text>
         </GlassCard>
-
-        {/* Removed the bottom “Next Round 4:24” status bar entirely */}
       </View>
     </ScreenShell>
   );
