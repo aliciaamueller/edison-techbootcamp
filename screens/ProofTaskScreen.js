@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { Pedometer } from "expo-sensors";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import { Image } from "expo-image";
 import * as Speech from "expo-speech";
 
 import ScreenShell from "../ui/ScreenShell";
@@ -23,218 +24,181 @@ import { theme } from "../ui/theme";
 import { startRinging, stopRinging } from "../services/alarmEngine";
 
 // ─────────────────────────────────────────────────────────────
-// CHALLENGE DATA POOLS
+// EDDY REACTIONS
 // ─────────────────────────────────────────────────────────────
 
-const SCRAMBLE_WORDS = {
-  easy: [
-    { word: "APPLE", scrambled: "PLPAE" },
-    { word: "WATER", scrambled: "TAWER" },
-    { word: "PHONE", scrambled: "HPONE" },
-    { word: "LIGHT", scrambled: "GILHT" },
-    { word: "MUSIC", scrambled: "SUMCI" },
-    { word: "BRAIN", scrambled: "RBAIN" },
-    { word: "CLOCK", scrambled: "LOCKC" },
-    { word: "DREAM", scrambled: "REDMA" },
-    { word: "SMILE", scrambled: "IMSEL" },
-    { word: "TOAST", scrambled: "SATOT" },
-    { word: "SUNNY", scrambled: "NUSNY" },
-    { word: "SPARK", scrambled: "PRASK" },
+const EDDY_REACTIONS = {
+  start: [
+    "Eddy is watching… 👀",
+    "Let's go! Eddy believes in you 💡",
+    "Prove to Eddy you're awake!",
+    "Eddy's lightbulb needs YOUR brainpower 🧠",
   ],
-  hard: [
-    { word: "MORNING", scrambled: "GNIMRON" },
-    { word: "SUNRISE", scrambled: "NRUSISE" },
-    { word: "KITCHEN", scrambled: "TCKIHNE" },
-    { word: "BLANKET", scrambled: "LNABTEK" },
-    { word: "STRETCH", scrambled: "TRSETCH" },
-    { word: "ESPRESSO", scrambled: "SSEPORES" },
-    { word: "PANCAKES", scrambled: "CNPAAKES" },
-    { word: "DAYLIGHT", scrambled: "YDALGHIT" },
-    { word: "CHAMPION", scrambled: "HCMAPION" },
-    { word: "ATTITUDE", scrambled: "TTAITDEU" },
+  correct: [
+    "Nice one! 🔥",
+    "Eddy's impressed! 💡",
+    "Big brain energy! 🧠",
+    "Boom! Keep going! ⚡",
+    "That's the one! 🎯",
+    "You're waking up! 🌅",
+  ],
+  wrong: [
+    "Nope! Try again 😴",
+    "Still sleepy? Focus! 👀",
+    "Eddy says no… try again!",
+    "Almost! One more shot 💪",
+  ],
+  complete: [
+    "Eddy's lightbulb is glowing! 💡✨",
+    "Brain = ON. Nice work! 🧠⚡",
+    "You crushed it! Eddy approves 🎉",
   ],
 };
 
-const REVERSE_WORDS = {
-  easy: ["HELLO", "AWAKE", "FRESH", "ALERT", "ALIVE", "READY", "FOCUS", "POWER", "HAPPY", "SHINE"],
-  hard: ["MORNING", "SUNRISE", "WARRIOR", "THUNDER", "VICTORY", "RESOLVE", "BREATHE", "CONQUER"],
-};
+function pickRandom(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
 
-const EMOJI_CHALLENGES = [
-  { emojis: "☀️ + ☕", answer: "MORNING", hint: "How your day starts" },
-  { emojis: "🛏️ → 🚶", answer: "WAKE UP", hint: "What you need to do right now" },
-  { emojis: "🌅 + 🐦", answer: "SUNRISE", hint: "Early birds see this" },
-  { emojis: "💪 + 🧠", answer: "STRONG", hint: "Mind and body" },
-  { emojis: "⏰ + 🏃", answer: "RUSH", hint: "When you're late" },
-  { emojis: "🌙 → ☀️", answer: "DAWN", hint: "Night becomes day" },
-  { emojis: "☕ + 🥐", answer: "BREAKFAST", hint: "First meal" },
-  { emojis: "🔔 + 📱", answer: "ALARM", hint: "What woke you up" },
-  { emojis: "😴 → 😊", answer: "AWAKE", hint: "You're becoming this" },
-  { emojis: "🎯 + 📅", answer: "GOAL", hint: "Something to aim for" },
-  { emojis: "🧘 + 🌿", answer: "ZEN", hint: "Inner peace" },
-  { emojis: "⚡ + 🔋", answer: "ENERGY", hint: "What coffee gives you" },
-  { emojis: "🏆 + 👑", answer: "CHAMPION", hint: "A winner" },
-  { emojis: "🌊 + 🏄", answer: "WAVE", hint: "Ride it at the beach" },
+// ─────────────────────────────────────────────────────────────
+// LOCAL CHALLENGE POOLS (fallback if AI fails)
+// ─────────────────────────────────────────────────────────────
+
+const REVERSE_WORDS_POOL = [
+  "MORNING", "SUNRISE", "BLANKET", "PILLOW", "COFFEE", "ENERGY",
+  "KITCHEN", "SHOWER", "AWAKE", "THUNDER", "WARRIOR", "ROCKET",
+  "FROZEN", "PLANET", "WINDOW", "SUNSET", "BRIDGE", "FOREST",
+  "GUITAR", "DRAGON", "SILVER", "MARKET", "CASTLE", "LAPTOP",
+  "TROPHY", "BUTTER", "PEPPER", "VIOLET", "GARDEN", "WINTER",
+  "SUMMER", "SPRING", "AUTUMN", "BREEZE", "CANDLE", "TEMPLE",
+  "ORANGE", "MEADOW", "ANCHOR", "BARREL", "VELVET", "OXYGEN",
+  "MARBLE", "FALCON", "BISCUIT", "PENGUIN", "COMPASS", "VOLCANO",
+  "JOURNEY", "MYSTERY", "RAINBOW", "DIAMOND", "FEATHER", "CRYSTAL",
+  "ORIGAMI", "HARVEST", "LANTERN", "WHISTLE", "THUNDER", "LIBERTY",
 ];
 
-const TRIVIA_QUESTIONS = {
-  easy: [
-    { q: "How many days in a week?", a: "7", options: ["5", "6", "7", "8"] },
-    { q: "What planet are we on?", a: "EARTH", options: ["MARS", "EARTH", "VENUS", "JUPITER"] },
-    { q: "How many continents are there?", a: "7", options: ["5", "6", "7", "8"] },
-    { q: "What color do you get mixing red + yellow?", a: "ORANGE", options: ["GREEN", "ORANGE", "PURPLE", "PINK"] },
-    { q: "How many hours in a day?", a: "24", options: ["12", "24", "36", "48"] },
-    { q: "What is H₂O?", a: "WATER", options: ["FIRE", "WATER", "AIR", "SALT"] },
-    { q: "How many legs does a spider have?", a: "8", options: ["6", "8", "10", "12"] },
-    { q: "Which month comes after March?", a: "APRIL", options: ["MAY", "FEBRUARY", "APRIL", "JUNE"] },
-    { q: "What is the capital of France?", a: "PARIS", options: ["LONDON", "BERLIN", "PARIS", "ROME"] },
-    { q: "How many colors in a rainbow?", a: "7", options: ["5", "6", "7", "8"] },
-  ],
-  hard: [
-    { q: "What year did the Titanic sink?", a: "1912", options: ["1905", "1912", "1920", "1898"] },
-    { q: "Which planet has the most moons?", a: "SATURN", options: ["JUPITER", "SATURN", "NEPTUNE", "URANUS"] },
-    { q: "What is the smallest country?", a: "VATICAN", options: ["MONACO", "VATICAN", "MALTA", "NAURU"] },
-    { q: "How many bones in the human body?", a: "206", options: ["186", "196", "206", "216"] },
-    { q: "What element does 'Au' represent?", a: "GOLD", options: ["SILVER", "GOLD", "COPPER", "IRON"] },
-    { q: "Which ocean is the largest?", a: "PACIFIC", options: ["ATLANTIC", "INDIAN", "PACIFIC", "ARCTIC"] },
-    { q: "What is the hardest natural substance?", a: "DIAMOND", options: ["STEEL", "DIAMOND", "QUARTZ", "TITANIUM"] },
-    { q: "How many strings on a standard guitar?", a: "6", options: ["4", "5", "6", "8"] },
-  ],
-};
+const MATH_PROBLEMS_POOL = [
+  { q: "13 × 7", a: 91 }, { q: "8 × 14", a: 112 }, { q: "17 × 6", a: 102 },
+  { q: "9 × 16", a: 144 }, { q: "23 × 4", a: 92 }, { q: "15 × 8", a: 120 },
+  { q: "12 × 9", a: 108 }, { q: "19 × 5", a: 95 }, { q: "7 × 18", a: 126 },
+  { q: "11 × 13", a: 143 }, { q: "24 × 3", a: 72 }, { q: "6 × 22", a: 132 },
+  { q: "14 × 7", a: 98 }, { q: "16 × 6", a: 96 }, { q: "25 × 4", a: 100 },
+  { q: "48 + 37 − 15", a: 70 }, { q: "63 − 28 + 14", a: 49 },
+  { q: "27 + 45 − 33", a: 39 }, { q: "56 − 19 + 28", a: 65 },
+  { q: "34 + 29 − 17", a: 46 }, { q: "72 − 35 + 18", a: 55 },
+  { q: "41 + 38 − 24", a: 55 }, { q: "89 − 47 + 13", a: 55 },
+  { q: "53 + 26 − 38", a: 41 }, { q: "67 − 29 + 15", a: 53 },
+];
+
+const SPEED_TYPE_POOL = [
+  "the early bird catches the worm",
+  "rise and shine champion",
+  "no more excuses get up now",
+  "today is going to be great",
+  "wake up and chase your dreams",
+  "coffee is calling your name",
+  "the alarm wins every time",
+  "prove to eddy you are awake",
+  "five more minutes is a lie",
+  "your bed is not your friend",
+  "champions never hit snooze",
+  "make today count starting now",
+  "good morning beautiful human",
+  "step one get out of bed",
+  "energy flows where focus goes",
+  "the world is waiting for you",
+  "time to shine bright like eddy",
+  "no snooze means you win",
+  "your future self says thank you",
+  "brains on blankets off lets go",
+];
+
+// Track used challenges to avoid repeats within a session
+const usedChallenges = { reverse: new Set(), math: new Set(), typing: new Set() };
 
 // ─────────────────────────────────────────────────────────────
-// CHALLENGE GENERATOR
+// AI CHALLENGE GENERATOR (with local fallback)
 // ─────────────────────────────────────────────────────────────
 
-function generateMentalChallenge(round) {
-  let types;
-  if (round <= 1) {
-    types = ["math", "scramble", "emoji", "trivia"];
-  } else if (round === 2) {
-    types = ["math", "scramble", "reverse", "emoji", "trivia"];
-  } else {
-    types = ["math", "scramble", "reverse", "emoji", "trivia"];
-  }
-
-  const type = types[Math.floor(Math.random() * types.length)];
-  const difficulty = round <= 1 ? "easy" : "hard";
-
-  switch (type) {
-    case "math":
-      return generateMathChallenge(round);
-    case "scramble":
-      return generateScrambleChallenge(difficulty);
-    case "reverse":
-      return generateReverseChallenge(difficulty);
-    case "emoji":
-      return generateEmojiChallenge();
-    case "trivia":
-      return generateTriviaChallenge(difficulty);
-    default:
-      return generateMathChallenge(round);
-  }
-}
-
-function generateMathChallenge(round) {
-  if (round <= 1) {
-    const a = Math.floor(Math.random() * 40) + 12;
-    const b = Math.floor(Math.random() * 40) + 12;
-    return {
-      type: "math",
-      label: "🔢 Quick Math",
-      question: `${a} + ${b}`,
-      displayQuestion: `${a} + ${b} = ?`,
-      answer: String(a + b),
-      inputType: "numeric",
+async function fetchAIChallenge(type) {
+  try {
+    const prompts = {
+      reverse: "Generate ONE random English word (6-8 letters, common noun or adjective, NOT a proper noun). Reply with ONLY the word in uppercase, nothing else.",
+      math: 'Generate ONE math problem using multiplication or multi-step addition/subtraction with 2-digit numbers. Reply with ONLY a JSON object like {"q":"13 × 7","a":91} and nothing else.',
+      typing: "Generate ONE short motivational sentence (5-7 words, lowercase, no punctuation except spaces). Make it fun and related to waking up. Reply with ONLY the sentence, nothing else.",
     };
+
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 100,
+        messages: [{ role: "user", content: prompts[type] }],
+      }),
+    });
+
+    if (!response.ok) throw new Error("API error");
+    const data = await response.json();
+    const text = data.content?.[0]?.text?.trim();
+    if (!text) throw new Error("Empty response");
+
+    if (type === "reverse") {
+      const word = text.toUpperCase().replace(/[^A-Z]/g, "");
+      if (word.length >= 4 && word.length <= 10) return { word };
+    }
+    if (type === "math") {
+      const cleaned = text.replace(/```json|```/g, "").trim();
+      const parsed = JSON.parse(cleaned);
+      if (parsed.q && parsed.a !== undefined) return parsed;
+    }
+    if (type === "typing") {
+      const sentence = text.toLowerCase().replace(/[^a-z ]/g, "").trim();
+      if (sentence.split(" ").length >= 3) return { sentence };
+    }
+
+    throw new Error("Invalid format");
+  } catch {
+    return null;
   }
-  if (round === 2) {
-    const a = Math.floor(Math.random() * 10) + 6;
-    const b = Math.floor(Math.random() * 8) + 3;
-    return {
-      type: "math",
-      label: "🔢 Quick Math",
-      question: `${a} × ${b}`,
-      displayQuestion: `${a} × ${b} = ?`,
-      answer: String(a * b),
-      inputType: "numeric",
-    };
+}
+
+function getLocalChallenge(type) {
+  if (type === "reverse") {
+    const unused = REVERSE_WORDS_POOL.filter((w) => !usedChallenges.reverse.has(w));
+    const pool = unused.length > 0 ? unused : REVERSE_WORDS_POOL;
+    const word = pickRandom(pool);
+    usedChallenges.reverse.add(word);
+    return { word };
   }
-  const a = Math.floor(Math.random() * 30) + 10;
-  const b = Math.floor(Math.random() * 20) + 10;
-  const c = Math.floor(Math.random() * 15) + 2;
-  const ops = ["+", "−"];
-  const op = ops[Math.floor(Math.random() * ops.length)];
-  const result = op === "+" ? a + b + c : a + b - c;
-  return {
-    type: "math",
-    label: "🔢 Quick Math",
-    question: `${a} + ${b} ${op} ${c}`,
-    displayQuestion: `${a} + ${b} ${op} ${c} = ?`,
-    answer: String(result),
-    inputType: "numeric",
-  };
+  if (type === "math") {
+    const unused = MATH_PROBLEMS_POOL.filter((p) => !usedChallenges.math.has(p.q));
+    const pool = unused.length > 0 ? unused : MATH_PROBLEMS_POOL;
+    const pick = pickRandom(pool);
+    usedChallenges.math.add(pick.q);
+    return pick;
+  }
+  if (type === "typing") {
+    const unused = SPEED_TYPE_POOL.filter((s) => !usedChallenges.typing.has(s));
+    const pool = unused.length > 0 ? unused : SPEED_TYPE_POOL;
+    const sentence = pickRandom(pool);
+    usedChallenges.typing.add(sentence);
+    return { sentence };
+  }
 }
 
-function generateScrambleChallenge(difficulty) {
-  const pool = SCRAMBLE_WORDS[difficulty] || SCRAMBLE_WORDS.easy;
-  const pick = pool[Math.floor(Math.random() * pool.length)];
-  return {
-    type: "scramble",
-    label: "🔤 Word Scramble",
-    question: pick.scrambled,
-    displayQuestion: pick.scrambled,
-    hint: `${pick.word.length} letters`,
-    answer: pick.word,
-    inputType: "text",
-  };
+async function generateChallenge(type) {
+  const aiResult = await fetchAIChallenge(type);
+  if (aiResult) return aiResult;
+  return getLocalChallenge(type);
 }
 
-function generateReverseChallenge(difficulty) {
-  const pool = REVERSE_WORDS[difficulty] || REVERSE_WORDS.easy;
-  const word = pool[Math.floor(Math.random() * pool.length)];
-  const reversed = word.split("").reverse().join("");
-  return {
-    type: "reverse",
-    label: "🔄 Reverse Word",
-    question: word,
-    displayQuestion: word,
-    hint: "Type this word backwards",
-    answer: reversed,
-    inputType: "text",
-  };
-}
-
-function generateEmojiChallenge() {
-  const pick = EMOJI_CHALLENGES[Math.floor(Math.random() * EMOJI_CHALLENGES.length)];
-  return {
-    type: "emoji",
-    label: "😎 Emoji Decode",
-    question: pick.emojis,
-    displayQuestion: pick.emojis,
-    hint: pick.hint,
-    answer: pick.answer,
-    inputType: "text",
-  };
-}
-
-function generateTriviaChallenge(difficulty) {
-  const pool = TRIVIA_QUESTIONS[difficulty] || TRIVIA_QUESTIONS.easy;
-  const pick = pool[Math.floor(Math.random() * pool.length)];
-  return {
-    type: "trivia",
-    label: "🧠 Quick Trivia",
-    question: pick.q,
-    displayQuestion: pick.q,
-    answer: pick.a,
-    options: pick.options,
-    inputType: "choice",
-  };
-}
-
-function checkAnswer(userInput, correctAnswer) {
-  const clean = (s) => s.trim().toUpperCase().replace(/\s+/g, " ");
-  return clean(userInput) === clean(correctAnswer);
+function generateTaskSequence() {
+  const types = ["reverse", "math", "typing"];
+  for (let i = types.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [types[i], types[j]] = [types[j], types[i]];
+  }
+  return types;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -268,7 +232,6 @@ export default function ProofTaskScreen({ navigation, route }) {
     }
   }, [round, params, navigation]);
 
-  // Keep alarm ringing on this screen
   useEffect(() => {
     startRinging({ musicGenre });
     Vibration.vibrate([0, 900, 500, 900, 500], true);
@@ -304,9 +267,7 @@ export default function ProofTaskScreen({ navigation, route }) {
 
 function StepsChallenge({ round, demoMode, demoRequiredSteps, onComplete }) {
   const TARGET_STEPS = useMemo(() => {
-    if (demoMode && demoRequiredSteps.length > 0) {
-      return demoRequiredSteps[round - 1] ?? 30;
-    }
+    if (demoMode && demoRequiredSteps.length > 0) return demoRequiredSteps[round - 1] ?? 30;
     if (round === 1) return 30;
     if (round === 2) return 15;
     if (round === 3) return 5;
@@ -318,24 +279,10 @@ function StepsChallenge({ round, demoMode, demoRequiredSteps, onComplete }) {
   const [status, setStatus] = useState("Counting steps…");
   const [fallbackReady, setFallbackReady] = useState(false);
 
-  const runAnim = useRef(new Animated.Value(0)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
   const pedometerSubRef = useRef(null);
   const baseRef = useRef(0);
   const finishedRef = useRef(false);
-
-  const taskTitle = `Walk ${TARGET_STEPS} steps`;
-
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(runAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
-        Animated.timing(runAnim, { toValue: 0, duration: 1000, useNativeDriver: true }),
-      ])
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [runAnim]);
 
   useEffect(() => {
     let fallbackTimer;
@@ -354,16 +301,12 @@ function StepsChallenge({ round, demoMode, demoRequiredSteps, onComplete }) {
         if (Platform.OS !== "android") {
           try {
             const end = new Date();
-            const startDate = new Date(end.getTime() - 60 * 1000);
-            const res = await Pedometer.getStepCountAsync(startDate, end);
+            const res = await Pedometer.getStepCountAsync(new Date(end.getTime() - 60000), end);
             baseRef.current = res?.steps ?? 0;
-          } catch {
-            baseRef.current = 0;
-          }
+          } catch { baseRef.current = 0; }
         }
         pedometerSubRef.current = Pedometer.watchStepCount((result) => {
-          const raw = result?.steps ?? 0;
-          setSteps(Math.max(0, raw - baseRef.current));
+          setSteps(Math.max(0, (result?.steps ?? 0) - baseRef.current));
         });
       } catch {
         setIsAvailable(false);
@@ -381,10 +324,7 @@ function StepsChallenge({ round, demoMode, demoRequiredSteps, onComplete }) {
   useEffect(() => {
     const progress = Math.min(1, steps / TARGET_STEPS);
     Animated.timing(progressAnim, { toValue: progress, duration: 300, useNativeDriver: false }).start();
-    if (steps >= TARGET_STEPS && !finishedRef.current) {
-      finishedRef.current = true;
-      onComplete();
-    }
+    if (steps >= TARGET_STEPS && !finishedRef.current) { finishedRef.current = true; onComplete(); }
   }, [steps, progressAnim, TARGET_STEPS, onComplete]);
 
   const onFallbackConfirm = () => {
@@ -394,29 +334,26 @@ function StepsChallenge({ round, demoMode, demoRequiredSteps, onComplete }) {
     ], { cancelable: true });
   };
 
-  const progress = Math.min(1, steps / TARGET_STEPS);
-  const progressPct = Math.round(progress * 100);
+  const progressPct = Math.round(Math.min(1, steps / TARGET_STEPS) * 100);
 
   return (
     <ScreenShell variant="alarm">
       <View style={styles.wrap}>
         <View style={styles.center}>
           <Text style={styles.kicker}>PROOF TASK</Text>
-          <Text style={styles.title}>{taskTitle}</Text>
+          <Text style={styles.title}>Walk {TARGET_STEPS} steps</Text>
           <GlassCard style={styles.card}>
             <Text style={styles.bigNumber}>{isAvailable ? `${steps}/${TARGET_STEPS}` : "—"}</Text>
             <Text style={styles.sub}>{isAvailable ? `${progressPct}% complete` : status}</Text>
             <View style={styles.progressTrack}>
-              <Animated.View style={[styles.progressFill, {
-                width: progressAnim.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] }),
-              }]} />
+              <Animated.View style={[styles.progressFill, { width: progressAnim.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] }) }]} />
             </View>
             <Text style={styles.helper}>{status}</Text>
           </GlassCard>
           {isAvailable === false && (
             <GlassCard style={styles.fallbackCard}>
               <Text style={styles.fallbackTitle}>No step counter detected</Text>
-              <Text style={styles.fallbackText}>Some devices can't count steps in Expo Go. You can still continue after a short check.</Text>
+              <Text style={styles.fallbackText}>Some devices can't count steps in Expo Go.</Text>
               <TouchableOpacity activeOpacity={0.9} style={[styles.fallbackBtn, !fallbackReady && { opacity: 0.5 }]} disabled={!fallbackReady} onPress={onFallbackConfirm}>
                 <Text style={styles.fallbackBtnText}>{fallbackReady ? "I'm up" : "Preparing…"}</Text>
               </TouchableOpacity>
@@ -435,173 +372,232 @@ function StepsChallenge({ round, demoMode, demoRequiredSteps, onComplete }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// MENTAL CHALLENGE (multi-type: math, scramble, reverse, emoji, trivia)
+// MENTAL CHALLENGE — 3 mini-games, randomized, Eddy-hosted
 // ═══════════════════════════════════════════════════════════════
 
 function MentalChallenge({ round, onComplete }) {
-  const [challenge, setChallenge] = useState(() => generateMentalChallenge(round));
+  const TOTAL_TASKS = 3;
+
+  const [taskSequence] = useState(() => generateTaskSequence());
+  const [taskIndex, setTaskIndex] = useState(0);
+  const [challengeData, setChallengeData] = useState(null);
   const [userInput, setUserInput] = useState("");
   const [feedback, setFeedback] = useState(null);
-  const [attempts, setAttempts] = useState(0);
-  const [showHint, setShowHint] = useState(false);
+  const [eddyMessage, setEddyMessage] = useState(pickRandom(EDDY_REACTIONS.start));
+  const [loading, setLoading] = useState(true);
+
   const shakeAnim = useRef(new Animated.Value(0)).current;
+  const inputRef = useRef(null);
+
+  const currentType = taskSequence[taskIndex] || "math";
+
+  // Load challenge data (AI or local)
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setUserInput("");
+    setFeedback(null);
+
+    generateChallenge(currentType).then((data) => {
+      if (!cancelled) {
+        setChallengeData(data);
+        setLoading(false);
+        setTimeout(() => inputRef.current?.focus(), 100);
+      }
+    });
+
+    return () => { cancelled = true; };
+  }, [taskIndex, currentType]);
 
   const triggerShake = () => {
     Animated.sequence([
-      Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 8, duration: 50, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: -8, duration: 50, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 12, duration: 40, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -12, duration: 40, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 8, duration: 40, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -8, duration: 40, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0, duration: 40, useNativeDriver: true }),
     ]).start();
   };
 
-  const newChallenge = () => {
-    setChallenge(generateMentalChallenge(round));
-    setUserInput("");
-    setFeedback(null);
-    setAttempts(0);
-    setShowHint(false);
+  const getCorrectAnswer = () => {
+    if (!challengeData) return "";
+    if (currentType === "reverse") return challengeData.word.split("").reverse().join("");
+    if (currentType === "math") return String(challengeData.a);
+    if (currentType === "typing") return challengeData.sentence;
+    return "";
   };
 
-  const handleSubmit = (selectedOption) => {
-    const answer = selectedOption || userInput;
-    if (!answer || !answer.trim()) return;
+  const checkUserAnswer = (input) => {
+    const correct = getCorrectAnswer();
+    const clean = (s) => s.trim().toLowerCase().replace(/\s+/g, " ");
+    return clean(input) === clean(correct);
+  };
 
-    if (checkAnswer(answer, challenge.answer)) {
+  const handleSubmit = () => {
+    if (!userInput.trim() || !challengeData) return;
+
+    if (checkUserAnswer(userInput)) {
       setFeedback("correct");
-      setTimeout(() => onComplete(), 600);
+
+      const nextIndex = taskIndex + 1;
+      if (nextIndex >= TOTAL_TASKS) {
+        setEddyMessage(pickRandom(EDDY_REACTIONS.complete));
+        setTimeout(() => onComplete(), 800);
+      } else {
+        setEddyMessage(pickRandom(EDDY_REACTIONS.correct));
+        setTimeout(() => {
+          setTaskIndex(nextIndex);
+        }, 700);
+      }
     } else {
       setFeedback("wrong");
-      setAttempts((a) => a + 1);
+      setEddyMessage(pickRandom(EDDY_REACTIONS.wrong));
       triggerShake();
-
-      if (attempts >= 2) {
-        setTimeout(() => newChallenge(), 1000);
-      } else {
-        if (attempts >= 1) setShowHint(true);
-        setTimeout(() => {
-          if (challenge.inputType !== "choice") setUserInput("");
-          setFeedback(null);
-        }, 600);
-      }
+      setTimeout(() => {
+        setUserInput("");
+        setFeedback(null);
+      }, 600);
     }
   };
 
-  const instruction = useMemo(() => {
-    switch (challenge.type) {
-      case "math": return "Solve the equation";
-      case "scramble": return "Unscramble the letters";
-      case "reverse": return "Type this word backwards";
-      case "emoji": return "What do these emojis mean?";
-      case "trivia": return "Pick the right answer";
-      default: return "Solve to silence the alarm";
-    }
-  }, [challenge.type]);
+  const typeConfig = {
+    reverse: {
+      icon: "🔄",
+      label: "REVERSE IT",
+      description: "Type this word backwards",
+      getDisplay: (data) => data?.word || "...",
+      placeholder: "Type backwards…",
+      keyboardType: "default",
+    },
+    math: {
+      icon: "🔢",
+      label: "SOLVE IT",
+      description: "What's the answer?",
+      getDisplay: (data) => data ? `${data.q} = ?` : "...",
+      placeholder: "Your answer…",
+      keyboardType: "numeric",
+    },
+    typing: {
+      icon: "⌨️",
+      label: "TYPE IT",
+      description: "Type this sentence exactly",
+      getDisplay: (data) => data?.sentence ? `"${data.sentence}"` : "...",
+      placeholder: "Type exactly…",
+      keyboardType: "default",
+    },
+  };
 
-  const questionFontSize = challenge.type === "emoji" ? 52 : 38;
+  const config = typeConfig[currentType] || typeConfig.math;
+  const progress = (taskIndex + (feedback === "correct" ? 1 : 0)) / TOTAL_TASKS;
+  const progressPct = Math.round(progress * 100);
 
   return (
     <ScreenShell variant="alarm">
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
-      >
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
           <View style={styles.wrap}>
             <View style={styles.center}>
-              <Text style={styles.kicker}>{challenge.label}</Text>
-              <Text style={styles.title}>{instruction}</Text>
 
-              <GlassCard style={[styles.card, { gap: 10 }]}>
-                <Text style={styles.mentalDifficulty}>
-                  Round {round}
-                </Text>
+              {/* Eddy + reaction */}
+              <Image
+                source={
+                  feedback === "correct"
+                    ? require("../assets/eddy/eddy-happy.png")
+                    : feedback === "wrong"
+                    ? require("../assets/eddy/eddy-sleepy.png")
+                    : require("../assets/eddy/eddy-running.png")
+                }
+                style={styles.eddySmall}
+                contentFit="contain"
+              />
+              <Text style={styles.eddyBubble}>{eddyMessage}</Text>
 
-                <Animated.View style={{ transform: [{ translateX: shakeAnim }] }}>
-                  <Text style={[styles.mentalQuestion, { fontSize: questionFontSize }]}>
-                    {challenge.displayQuestion}
-                  </Text>
-                </Animated.View>
-
-                {showHint && challenge.hint && challenge.inputType !== "choice" && (
-                  <Text style={styles.mentalHintText}>💡 Hint: {challenge.hint}</Text>
-                )}
-
-                {(challenge.inputType === "text" || challenge.inputType === "numeric") && (
-                  <TextInput
-                    style={styles.mentalInput}
-                    placeholder={challenge.type === "math" ? "Your answer" : "Type here…"}
-                    placeholderTextColor="rgba(255,255,255,0.40)"
-                    value={userInput}
-                    onChangeText={(t) => {
-                      setUserInput(t);
-                      setFeedback(null);
-                    }}
-                    keyboardType={challenge.inputType === "numeric" ? "numeric" : "default"}
-                    autoCapitalize="characters"
-                    returnKeyType="done"
-                    onSubmitEditing={() => handleSubmit()}
-                    autoFocus
-                  />
-                )}
-
-                {challenge.inputType === "choice" && challenge.options && (
-                  <View style={styles.triviaGrid}>
-                    {challenge.options.map((opt, idx) => {
-                      const isSelected = userInput === opt;
-                      const isCorrectAnswer = feedback === "correct" && opt === challenge.answer;
-                      const isWrongSelection = feedback === "wrong" && isSelected;
-
-                      return (
-                        <TouchableOpacity
-                          key={idx}
-                          activeOpacity={0.85}
-                          style={[
-                            styles.triviaOption,
-                            isSelected && styles.triviaOptionSelected,
-                            isCorrectAnswer && styles.triviaOptionCorrect,
-                            isWrongSelection && styles.triviaOptionWrong,
-                          ]}
-                          onPress={() => {
-                            if (feedback) return;
-                            setUserInput(opt);
-                            handleSubmit(opt);
-                          }}
-                        >
-                          <Text style={[
-                            styles.triviaOptionText,
-                            (isCorrectAnswer || isWrongSelection) && { color: "#fff" },
-                          ]}>
-                            {opt}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
+              {/* Progress dots */}
+              <View style={styles.taskProgress}>
+                {[0, 1, 2].map((i) => (
+                  <View
+                    key={i}
+                    style={[
+                      styles.taskDot,
+                      i < taskIndex && styles.taskDotDone,
+                      i === taskIndex && styles.taskDotActive,
+                    ]}
+                  >
+                    <Text style={styles.taskDotText}>
+                      {i < taskIndex ? "✓" : i + 1}
+                    </Text>
                   </View>
-                )}
+                ))}
+              </View>
 
-                {feedback === "wrong" && (
-                  <Text style={styles.mentalWrong}>
-                    {attempts >= 2 ? "❌ Wrong — new challenge coming…" : "❌ Wrong — try again!"}
-                  </Text>
-                )}
-                {feedback === "correct" && (
-                  <Text style={styles.mentalCorrect}>✅ Correct!</Text>
+              {/* Challenge type label */}
+              <Text style={styles.kicker}>{config.icon} {config.label}</Text>
+              <Text style={styles.miniDesc}>{config.description}</Text>
+
+              {/* The challenge */}
+              <GlassCard style={[styles.card, { gap: 12 }]}>
+                {loading ? (
+                  <Text style={styles.loadingText}>Eddy is thinking… 🧠</Text>
+                ) : (
+                  <>
+                    <Animated.View style={{ transform: [{ translateX: shakeAnim }] }}>
+                      <Text style={[
+                        styles.challengeDisplay,
+                        currentType === "typing" && { fontSize: 22, letterSpacing: 0 },
+                      ]}>
+                        {config.getDisplay(challengeData)}
+                      </Text>
+                    </Animated.View>
+
+                    <TextInput
+                      ref={inputRef}
+                      style={[
+                        styles.mentalInput,
+                        feedback === "wrong" && { borderColor: "#FF6B6B" },
+                        feedback === "correct" && { borderColor: theme.colors.success },
+                      ]}
+                      placeholder={config.placeholder}
+                      placeholderTextColor="rgba(255,255,255,0.35)"
+                      value={userInput}
+                      onChangeText={(t) => {
+                        setUserInput(t);
+                        if (feedback) setFeedback(null);
+                      }}
+                      keyboardType={config.keyboardType}
+                      autoCapitalize={currentType === "typing" ? "none" : "characters"}
+                      autoCorrect={false}
+                      returnKeyType="done"
+                      onSubmitEditing={handleSubmit}
+                    />
+
+                    {feedback === "wrong" && (
+                      <Text style={styles.mentalWrong}>❌ Try again!</Text>
+                    )}
+                    {feedback === "correct" && (
+                      <Text style={styles.mentalCorrect}>
+                        {taskIndex + 1 >= TOTAL_TASKS ? "✅ All done!" : `✅ ${TOTAL_TASKS - taskIndex - 1} more to go!`}
+                      </Text>
+                    )}
+                  </>
                 )}
               </GlassCard>
 
-              <TouchableOpacity activeOpacity={0.8} onPress={newChallenge} style={{ marginTop: 4 }}>
-                <Text style={styles.skipLink}>🔄 Different challenge</Text>
-              </TouchableOpacity>
+              {/* Overall progress */}
+              <View style={{ width: "100%", marginTop: 4 }}>
+                <View style={styles.progressTrack}>
+                  <View style={[styles.progressFill, { width: `${progressPct}%` }]} />
+                </View>
+                <Text style={styles.helper}>Task {Math.min(taskIndex + 1, TOTAL_TASKS)} of {TOTAL_TASKS}</Text>
+              </View>
             </View>
 
-            {challenge.inputType !== "choice" && (
+            {/* Submit button */}
+            {!loading && (
               <TouchableOpacity
                 activeOpacity={0.92}
-                style={[styles.cta, !userInput.trim() && { opacity: 0.35 }]}
-                disabled={!userInput.trim()}
-                onPress={() => handleSubmit()}
+                style={[styles.cta, (!userInput.trim() || feedback === "correct") && { opacity: 0.35 }]}
+                disabled={!userInput.trim() || feedback === "correct"}
+                onPress={handleSubmit}
               >
                 <Text style={styles.ctaText}>SUBMIT</Text>
                 <Text style={styles.ctaArrow}>→</Text>
@@ -627,21 +623,14 @@ function CameraChallenge({ round, onComplete }) {
 
   const progressAnim = useRef(new Animated.Value(0)).current;
   const finishedRef = useRef(false);
-
   const TARGET_DETECTIONS = round === 1 ? 8 : round === 2 ? 5 : 3;
 
-  useEffect(() => {
-    if (!permission?.granted) requestPermission();
-  }, []);
+  useEffect(() => { if (!permission?.granted) requestPermission(); }, []);
+  useEffect(() => { const t = setTimeout(() => setFallbackReady(true), 5000); return () => clearTimeout(t); }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => setFallbackReady(true), 5000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    const progress = Math.min(1, faceDetectedCount / TARGET_DETECTIONS);
-    Animated.timing(progressAnim, { toValue: progress, duration: 200, useNativeDriver: false }).start();
+    const p = Math.min(1, faceDetectedCount / TARGET_DETECTIONS);
+    Animated.timing(progressAnim, { toValue: p, duration: 200, useNativeDriver: false }).start();
     if (faceDetectedCount >= TARGET_DETECTIONS && !finishedRef.current) {
       finishedRef.current = true;
       setStatus("Face confirmed! ✅");
@@ -651,11 +640,11 @@ function CameraChallenge({ round, onComplete }) {
 
   const handleFacesDetected = useCallback(({ faces }) => {
     if (finishedRef.current) return;
-    if (faces && faces.length > 0) {
+    if (faces?.length > 0) {
       setFaceDetectedCount((prev) => {
-        const next = prev + 1;
-        if (next < TARGET_DETECTIONS) setStatus(`Hold steady… ${next}/${TARGET_DETECTIONS}`);
-        return next;
+        const n = prev + 1;
+        if (n < TARGET_DETECTIONS) setStatus(`Hold steady… ${n}/${TARGET_DETECTIONS}`);
+        return n;
       });
     } else {
       setFaceDetectedCount(0);
@@ -670,13 +659,14 @@ function CameraChallenge({ round, onComplete }) {
     ], { cancelable: true });
   };
 
-  const progress = Math.min(1, faceDetectedCount / TARGET_DETECTIONS);
-  const progressPct = Math.round(progress * 100);
+  const progressPct = Math.round(Math.min(1, faceDetectedCount / TARGET_DETECTIONS) * 100);
 
   if (!permission) {
     return (
       <ScreenShell variant="alarm">
-        <View style={styles.center}><Text style={styles.title}>Requesting camera access…</Text></View>
+        <View style={styles.center}>
+          <Text style={styles.title}>Requesting camera access…</Text>
+        </View>
       </ScreenShell>
     );
   }
@@ -689,9 +679,16 @@ function CameraChallenge({ round, onComplete }) {
             <Text style={styles.kicker}>CAMERA CHALLENGE</Text>
             <Text style={styles.title}>Camera not available</Text>
             <GlassCard style={styles.fallbackCard}>
-              <Text style={styles.fallbackTitle}>{useFallback ? "Camera couldn't detect your face" : "Camera permission denied"}</Text>
-              <Text style={styles.fallbackText}>You can still verify you're awake with a manual confirmation.</Text>
-              <TouchableOpacity activeOpacity={0.9} style={[styles.fallbackBtn, !fallbackReady && { opacity: 0.5 }]} disabled={!fallbackReady} onPress={onFallbackConfirm}>
+              <Text style={styles.fallbackTitle}>
+                {useFallback ? "Camera couldn't detect your face" : "Camera permission denied"}
+              </Text>
+              <Text style={styles.fallbackText}>You can still verify you're awake manually.</Text>
+              <TouchableOpacity
+                activeOpacity={0.9}
+                style={[styles.fallbackBtn, !fallbackReady && { opacity: 0.5 }]}
+                disabled={!fallbackReady}
+                onPress={onFallbackConfirm}
+              >
                 <Text style={styles.fallbackBtnText}>{fallbackReady ? "I'm awake" : "Preparing…"}</Text>
               </TouchableOpacity>
             </GlassCard>
@@ -712,9 +709,17 @@ function CameraChallenge({ round, onComplete }) {
               style={styles.camera}
               facing="front"
               onFacesDetected={handleFacesDetected}
-              faceDetectorSettings={{ mode: 1, detectLandmarks: 0, runClassifications: 0, minDetectionInterval: 300, tracking: true }}
+              faceDetectorSettings={{
+                mode: 1,
+                detectLandmarks: 0,
+                runClassifications: 0,
+                minDetectionInterval: 300,
+                tracking: true,
+              }}
             />
-            <View style={styles.cameraOverlay}><View style={styles.cameraFrame} /></View>
+            <View style={styles.cameraOverlay}>
+              <View style={styles.cameraFrame} />
+            </View>
           </View>
           <GlassCard style={[styles.card, { marginTop: 14 }]}>
             <Text style={styles.sub}>{status}</Text>
@@ -740,40 +745,48 @@ function CameraChallenge({ round, onComplete }) {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, paddingBottom: 110 },
-  center: { flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: theme.space.xl, gap: 12 },
-  kicker: { color: theme.colors.textFaint, fontWeight: "900", letterSpacing: 2, fontSize: 12 },
+  center: { flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: theme.space.xl, gap: 8 },
+  kicker: { color: theme.colors.textFaint, fontWeight: "900", letterSpacing: 2, fontSize: 13 },
+  miniDesc: { color: theme.colors.textMuted, fontWeight: "700", fontSize: 15, marginBottom: 4, textAlign: "center" },
   title: { color: theme.colors.text, fontSize: 34, fontWeight: "900", textAlign: "center", letterSpacing: -0.6, marginBottom: 6 },
   card: { width: "100%", paddingVertical: 18, alignItems: "center" },
   bigNumber: { color: theme.colors.text, fontWeight: "900", fontSize: 46, letterSpacing: -1.2 },
   sub: { color: theme.colors.textMuted, fontWeight: "800", fontSize: 14, marginTop: 2, marginBottom: 14, textAlign: "center" },
-  progressTrack: { width: "100%", height: 12, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.14)", overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.18)" },
+  progressTrack: { width: "100%", height: 10, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.14)", overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.18)" },
   progressFill: { height: "100%", borderRadius: 999, backgroundColor: "rgba(255,255,255,0.75)" },
-  helper: { marginTop: 12, color: theme.colors.textFaint, fontWeight: "800", fontSize: 13, textAlign: "center" },
+  helper: { marginTop: 8, color: theme.colors.textFaint, fontWeight: "800", fontSize: 13, textAlign: "center" },
+
+  // Eddy
+  eddySmall: { width: 80, height: 80, marginBottom: 2 },
+  eddyBubble: { color: theme.colors.text, fontWeight: "800", fontSize: 15, textAlign: "center", marginBottom: 6 },
+
+  // Task progress dots
+  taskProgress: { flexDirection: "row", gap: 14, marginBottom: 10 },
+  taskDot: { width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.12)", borderWidth: 1.5, borderColor: "rgba(255,255,255,0.20)", alignItems: "center", justifyContent: "center" },
+  taskDotActive: { backgroundColor: "rgba(255,255,255,0.22)", borderColor: "rgba(255,255,255,0.45)" },
+  taskDotDone: { backgroundColor: "rgba(70,242,162,0.3)", borderColor: theme.colors.success },
+  taskDotText: { color: theme.colors.text, fontWeight: "900", fontSize: 14 },
+
+  // Challenge display
+  challengeDisplay: { color: theme.colors.text, fontWeight: "900", fontSize: 34, letterSpacing: -0.5, textAlign: "center", marginVertical: 6 },
+  loadingText: { color: theme.colors.textMuted, fontWeight: "800", fontSize: 16, textAlign: "center", paddingVertical: 20 },
+
+  // Input
+  mentalInput: { width: "100%", backgroundColor: "rgba(255,255,255,0.10)", borderWidth: 2, borderColor: "rgba(255,255,255,0.22)", borderRadius: theme.radius.lg, padding: 16, color: theme.colors.text, fontWeight: "900", fontSize: 22, textAlign: "center", letterSpacing: 0.5 },
+  mentalWrong: { color: "#FF6B6B", fontWeight: "900", fontSize: 15, marginTop: 4 },
+  mentalCorrect: { color: theme.colors.success, fontWeight: "900", fontSize: 15, marginTop: 4 },
+
+  // Fallback
   fallbackCard: { width: "100%", marginTop: 10, paddingVertical: 16 },
   fallbackTitle: { color: theme.colors.text, fontWeight: "900", fontSize: 18, marginBottom: 6, textAlign: "center" },
   fallbackText: { color: theme.colors.textMuted, fontWeight: "700", fontSize: 13, textAlign: "center", lineHeight: 18, marginBottom: 12 },
   fallbackBtn: { height: 52, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.92)", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(0,0,0,0.06)" },
   fallbackBtnText: { color: "#111", fontWeight: "900", letterSpacing: 1.1 },
+
+  // CTA
   cta: { position: "absolute", left: theme.space.xl, right: theme.space.xl, bottom: 26, height: 64, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.95)", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 14, borderWidth: 1, borderColor: "rgba(0,0,0,0.06)", shadowColor: "#000", shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.18, shadowRadius: 16, elevation: 12 },
   ctaText: { color: "#111", fontWeight: "900", fontSize: 18, letterSpacing: 1.2 },
   ctaArrow: { color: "#111", fontSize: 22, fontWeight: "900" },
-
-  // Mental challenge
-  mentalDifficulty: { color: theme.colors.textFaint, fontWeight: "800", fontSize: 12, letterSpacing: 1, textTransform: "uppercase" },
-  mentalQuestion: { color: theme.colors.text, fontWeight: "900", fontSize: 38, letterSpacing: -1, textAlign: "center", marginVertical: 10 },
-  mentalInput: { width: "100%", backgroundColor: "rgba(255,255,255,0.10)", borderWidth: 1, borderColor: "rgba(255,255,255,0.22)", borderRadius: theme.radius.lg, padding: 16, color: theme.colors.text, fontWeight: "900", fontSize: 24, textAlign: "center", letterSpacing: 1 },
-  mentalWrong: { color: "#FF6B6B", fontWeight: "900", fontSize: 16, marginTop: 6 },
-  mentalCorrect: { color: theme.colors.success, fontWeight: "900", fontSize: 16, marginTop: 6 },
-  mentalHintText: { color: theme.colors.warn, fontWeight: "800", fontSize: 14, textAlign: "center", marginBottom: 4 },
-  skipLink: { color: theme.colors.textMuted, fontWeight: "700", fontSize: 14, textDecorationLine: "underline" },
-
-  // Trivia
-  triviaGrid: { width: "100%", gap: 10, marginTop: 4 },
-  triviaOption: { width: "100%", paddingVertical: 16, paddingHorizontal: 20, borderRadius: theme.radius.lg, backgroundColor: "rgba(255,255,255,0.10)", borderWidth: 1.5, borderColor: "rgba(255,255,255,0.20)", alignItems: "center" },
-  triviaOptionSelected: { borderColor: "rgba(255,255,255,0.50)", backgroundColor: "rgba(255,255,255,0.18)" },
-  triviaOptionCorrect: { borderColor: theme.colors.success, backgroundColor: "rgba(70,242,162,0.25)" },
-  triviaOptionWrong: { borderColor: "#FF6B6B", backgroundColor: "rgba(255,107,107,0.25)" },
-  triviaOptionText: { color: theme.colors.text, fontWeight: "900", fontSize: 18, letterSpacing: 0.5 },
 
   // Camera
   cameraContainer: { width: "100%", height: 280, borderRadius: theme.radius.xl, overflow: "hidden", borderWidth: 2, borderColor: "rgba(255,255,255,0.22)", position: "relative" },
