@@ -238,7 +238,7 @@ export default function ProofTaskScreen({ navigation, route }) {
     // If we came from AlarmRinging (keepRinging=true), just duck the volume.
     // Otherwise (debug/direct load), start ringing.
     if (keepRinging) {
-      setAlarmVolume(0.5);
+      setAlarmVolume(0.1);
     } else {
       startRinging({ musicGenre });
     }
