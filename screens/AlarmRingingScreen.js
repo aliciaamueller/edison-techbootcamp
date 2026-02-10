@@ -11,6 +11,71 @@ import { theme } from "../ui/theme";
 import { startRinging, stopRinging } from "../services/alarmEngine";
 import { setAlarmVolume } from "../services/soundManager";
 
+// ─────────────────────────────────────────────────────────────
+// AI MESSAGE TEMPLATES (multiple per personality)
+// ─────────────────────────────────────────────────────────────
+
+const MESSAGE_TEMPLATES = {
+  motivational: [
+    (name, why) => `Good morning ${name}! Let's crush ${why} today.`,
+    (name, why) => `Rise and shine ${name}! ${why} isn't going to handle itself. You've got this.`,
+    (name, why) => `Hey ${name}, today is YOUR day. Get up and own ${why}.`,
+    (name, why) => `${name}, champions don't snooze. Time to show up for ${why}.`,
+    (name, why) => `New day, new wins ${name}. ${why} starts the moment you stand up.`,
+    (name, why) => `${name}, you didn't set this alarm for nothing. ${why} is waiting. Let's go.`,
+    (name, why) => `Good morning ${name}! Every great day starts with one brave move. Get up for ${why}.`,
+    (name, why) => `${name}, your future self will thank you. Time to tackle ${why}.`,
+    (name, why) => `The world needs you awake ${name}. Get up, show up, and crush ${why}.`,
+    (name, why) => `${name}, comfort zone or ${why}? You already know the answer. UP.`,
+  ],
+  sassy: [
+    (name, why) => `Alright ${name}. Enough. Time to stop negotiating with your pillow and get up for ${why}.`,
+    (name, why) => `${name}, your bed doesn't pay your bills. Get up. ${why} does.`,
+    (name, why) => `Oh, still horizontal ${name}? Cute. ${why} isn't going to do itself.`,
+    (name, why) => `${name}, the snooze button is not your friend. Neither is missing ${why}.`,
+    (name, why) => `Listen ${name}, your pillow doesn't love you. But ${why}? That actually matters.`,
+    (name, why) => `${name}, I will literally not stop until you get up. So let's skip to ${why}.`,
+    (name, why) => `Sleeping beauty called, ${name}. Even they got up eventually. ${why} awaits.`,
+    (name, why) => `${name}, you set me for a reason. Remember? ${why}. Now MOVE.`,
+    (name, why) => `Plot twist ${name}: the alarm wins. Get up for ${why} or I get louder.`,
+    (name, why) => `${name}, every minute in bed is a minute stolen from ${why}. Your call.`,
+  ],
+  "drill-sergeant": [
+    (name, why) => `UP NOW ${name}! You said ${why}. MOVE. PROVE YOU'RE AWAKE.`,
+    (name, why) => `${name}! On your feet IMMEDIATELY. ${why} doesn't wait for sleepers.`,
+    (name, why) => `ZERO EXCUSES ${name}. You committed to ${why}. NOW EXECUTE.`,
+    (name, why) => `${name}, this is not a drill. Actually it IS a drill. GET UP. ${why}. NOW.`,
+    (name, why) => `I don't care how tired you are ${name}. ${why} is the mission. MOVE IT.`,
+    (name, why) => `${name}! Feet on the floor in 3, 2, 1. ${why} is not optional today.`,
+    (name, why) => `ATTENTION ${name}! You signed up for ${why}. No one forced you. NOW GO.`,
+    (name, why) => `${name}, discipline beats motivation every single morning. UP for ${why}.`,
+    (name, why) => `Your bed is the enemy ${name}. ${why} is the objective. ENGAGE.`,
+    (name, why) => `${name}! Sleep is over. ${why} starts NOW. Do NOT make me repeat myself.`,
+  ],
+  zen: [
+    (name, why) => `Good morning ${name}. Today brings ${why}. Breathe once. Stand up. Begin.`,
+    (name, why) => `${name}, a new day unfolds gently. ${why} awaits your calm presence.`,
+    (name, why) => `Breathe in ${name}. Breathe out. Now rise softly and greet ${why}.`,
+    (name, why) => `${name}, the morning light is here. Let ${why} guide your first steps today.`,
+    (name, why) => `Stillness was beautiful ${name}. Now, with intention, move toward ${why}.`,
+    (name, why) => `${name}, your body rested. Your mind is ready. ${why} begins with one breath.`,
+    (name, why) => `Gently now ${name}. The world is quiet and ${why} is yours to embrace.`,
+    (name, why) => `${name}, each morning is a small rebirth. Today's purpose: ${why}. Rise.`,
+    (name, why) => `The silence holds space for you ${name}. Carry it with you into ${why}.`,
+    (name, why) => `${name}, you are awake. You are here. ${why} flows naturally from this moment.`,
+  ],
+};
+
+function pickRandomMessage(personality, name, why) {
+  const templates = MESSAGE_TEMPLATES[personality] || MESSAGE_TEMPLATES.motivational;
+  const index = Math.floor(Math.random() * templates.length);
+  return templates[index](name, why);
+}
+
+// ─────────────────────────────────────────────────────────────
+// MAIN COMPONENT
+// ─────────────────────────────────────────────────────────────
+
 export default function AlarmRingingScreen({ navigation, route }) {
   const params = route?.params || {};
   const {
@@ -29,29 +94,19 @@ export default function AlarmRingingScreen({ navigation, route }) {
   const headline = round === 1 ? "WAKE\nUP" : round === 2 ? "STAY\nUP" : "FINAL\nCHECK";
   const roundLabel = `ROUND ${round} OF 3`;
 
-  // Full “AI” sentence (spoken)
+  const name = userName?.trim() ? userName.trim() : "you";
+  const why = reason?.trim() ? reason.trim() : "your goals";
+
+  // ✅ CHANGED: Pick a random message once per round (not per render)
   const spokenMessage = useMemo(() => {
-    const name = userName?.trim() ? userName.trim() : "you";
-    const why = reason?.trim() ? reason.trim() : "your goals";
+    return pickRandomMessage(aiPersonality, name, why);
+  }, [aiPersonality, name, why, round]);
 
-    if (aiPersonality === "sassy") {
-      return `Alright ${name}. Enough. Time to stop negotiating with your pillow and get up for ${why}.`;
-    }
-    if (aiPersonality === "drill-sergeant") {
-      return `UP NOW ${name}! You said ${why}. MOVE. PROVE YOU'RE AWAKE.`;
-    }
-    if (aiPersonality === "zen") {
-      return `Good morning ${name}. Today brings ${why}. Breathe once. Stand up. Begin.`;
-    }
-    return `Good morning ${name}! Let's crush ${why} today.`;
-  }, [aiPersonality, userName, reason]);
-
-  // Short UI message only (what you asked for)
+  // Short UI message only
   const shortReason = useMemo(() => {
     const r = (reason || "").trim();
     if (!r) return "Wake up";
 
-    // Keep it short: first clause + max 6 words
     const first = r.split(/[.!?\n]/)[0].trim();
     const words = first.split(/\s+/).filter(Boolean);
     const sliced = words.slice(0, 6).join(" ");
@@ -68,11 +123,8 @@ export default function AlarmRingingScreen({ navigation, route }) {
   const speakOnce = async () => {
     try {
       if (!isArmedRef.current) return;
-
-      // Don’t stack speech over itself
       const speaking = await Speech.isSpeakingAsync();
       if (speaking) return;
-
       Speech.speak(spokenMessage, { rate: 0.95, pitch: 1.0 });
     } catch {
       // ignore
@@ -82,7 +134,7 @@ export default function AlarmRingingScreen({ navigation, route }) {
   useEffect(() => {
     isArmedRef.current = true;
 
-    // Start looping alarm sound bed (your alarmEngine should loop)
+    // Start looping alarm sound bed
     startRinging({ musicGenre });
 
     // Start vibration loop
@@ -100,26 +152,23 @@ export default function AlarmRingingScreen({ navigation, route }) {
       isArmedRef.current = false;
       if (loopTimerRef.current) clearInterval(loopTimerRef.current);
 
-      stopRinging();
+      // ✅ CHANGED: We do NOT stop ringing here anymore.
+      // The alarm sound + vibration persist into ProofTaskScreen.
       Speech.stop();
-      Vibration.cancel();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [musicGenre, spokenMessage]);
 
   const goToChallenge = () => {
-    // IMPORTANT: stop everything the moment they press the button
     isArmedRef.current = false;
     if (loopTimerRef.current) clearInterval(loopTimerRef.current);
-
-    stopRinging();
     Speech.stop();
-    Vibration.cancel();
 
+    // ✅ DO NOT stop alarm sound or vibration here.
     navigation.navigate("ProofTask", { ...params, round });
   };
 
-  // optional helpers if you still want volume controls later
+  // optional volume controls
   const setLow = async () => {
     await setAlarmVolume(0.3);
     setVolumeLabel(30);
@@ -151,17 +200,6 @@ export default function AlarmRingingScreen({ navigation, route }) {
           </GlassCard>
 
           <Text style={styles.volTiny}>Volume: {volumeLabel}%</Text>
-
-          {/* If you want the buttons back later, uncomment:
-          <View style={styles.volRow}>
-            <TouchableOpacity activeOpacity={0.9} style={styles.volBtn} onPress={setLow}>
-              <Text style={styles.volBtnText}>Lower volume</Text>
-            </TouchableOpacity>
-            <TouchableOpacity activeOpacity={0.9} style={styles.volBtn} onPress={setFull}>
-              <Text style={styles.volBtnText}>Full volume</Text>
-            </TouchableOpacity>
-          </View>
-          */}
         </View>
 
         <TouchableOpacity activeOpacity={0.92} style={styles.cta} onPress={goToChallenge}>
@@ -176,7 +214,7 @@ export default function AlarmRingingScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   wrap: {
     flex: 1,
-    paddingBottom: 120, // reserve so nothing can ever sit behind CTA
+    paddingBottom: 120,
   },
   center: {
     flex: 1,
@@ -285,8 +323,6 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "900",
   },
-
-  // (kept for later if you re-enable buttons)
   volRow: { flexDirection: "row", gap: 12, width: "100%", marginTop: 4 },
   volBtn: {
     flex: 1,

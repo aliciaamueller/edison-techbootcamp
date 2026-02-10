@@ -10,8 +10,9 @@ export default function ProofMethodScreen({ navigation, route }) {
   const [selectedMethod, setSelectedMethod] = useState("steps");
 
   const methods = [
-    { id: "steps", icon: "👟", name: "Walk Steps", desc: "Take steps with your phone" },
-    { id: "camera", icon: "📸", name: "Hand Wave", desc: "Wave at the camera" },
+    { id: "mental", icon: "🧠", name: "Mental Challenge", desc: "Solve a puzzle to prove you're alert" },
+    { id: "steps", icon: "👟", name: "Physical — Steps", desc: "Walk steps with your phone" },
+    { id: "camera", icon: "📸", name: "Physical — Camera", desc: "Show your face to the camera" },
   ];
 
   return (
@@ -24,7 +25,7 @@ export default function ProofMethodScreen({ navigation, route }) {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.h1}>How do you want{`\n`}to prove you’re awake?</Text>
+        <Text style={styles.h1}>How do you want{`\n`}to prove you're awake?</Text>
 
         <View style={{ gap: 12, marginTop: 14 }}>
           {methods.map((m) => {
