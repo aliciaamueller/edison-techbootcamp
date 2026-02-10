@@ -117,8 +117,8 @@ export default function AlarmRingingScreen({ navigation, route }) {
     round === 1
       ? require("../assets/eddy/eddy-sleepy.png")
       : round === 2
-      ? require("../assets/eddy/eddy-running.png")
-      : require("../assets/eddy/eddy-happy.png");
+        ? require("../assets/eddy/eddy-running.png")
+        : require("../assets/eddy/eddy-happy.png");
 
   const speakOnce = async () => {
     try {
@@ -157,7 +157,7 @@ export default function AlarmRingingScreen({ navigation, route }) {
     if (loopTimerRef.current) clearInterval(loopTimerRef.current);
     Speech.stop();
 
-    navigation.navigate("ProofTask", { ...params, round });
+    navigation.navigate("ProofTask", { ...params, round, keepRinging: true });
   };
 
   const setLow = async () => {

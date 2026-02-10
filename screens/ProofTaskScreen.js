@@ -22,6 +22,7 @@ import ScreenShell from "../ui/ScreenShell";
 import GlassCard from "../ui/GlassCard";
 import { theme } from "../ui/theme";
 import { startRinging, stopRinging } from "../services/alarmEngine";
+import { setAlarmVolume } from "../services/soundManager";
 
 // ─────────────────────────────────────────────────────────────
 // EDDY REACTIONS
@@ -213,6 +214,7 @@ export default function ProofTaskScreen({ navigation, route }) {
     demoMode = false,
     demoRequiredSteps = [],
     musicGenre = "energetic",
+    keepRinging = false,
   } = params;
 
   const finishedRef = useRef(false);
@@ -233,15 +235,24 @@ export default function ProofTaskScreen({ navigation, route }) {
   }, [round, params, navigation]);
 
   useEffect(() => {
-    startRinging({ musicGenre });
+    // If we came from AlarmRinging (keepRinging=true), just duck the volume.
+    // Otherwise (debug/direct load), start ringing.
+    if (keepRinging) {
+      setAlarmVolume(0.5);
+    } else {
+      startRinging({ musicGenre });
+    }
+
     Vibration.vibrate([0, 900, 500, 900, 500], true);
 
     return () => {
-      stopRinging();
+      // Don't stop ringing on unmount!
+      // Only stop if onComplete triggers it.
+      // If we go back, volume should probably go back up, but AlarmRinging screen handles its own start.
       Speech.stop();
       Vibration.cancel();
     };
-  }, [musicGenre]);
+  }, [musicGenre, keepRinging]);
 
   if (proofMethod === "mental") {
     return <MentalChallenge round={round} onComplete={onComplete} />;
@@ -504,8 +515,8 @@ function MentalChallenge({ round, onComplete }) {
                   feedback === "correct"
                     ? require("../assets/eddy/eddy-happy.png")
                     : feedback === "wrong"
-                    ? require("../assets/eddy/eddy-sleepy.png")
-                    : require("../assets/eddy/eddy-running.png")
+                      ? require("../assets/eddy/eddy-sleepy.png")
+                      : require("../assets/eddy/eddy-running.png")
                 }
                 style={styles.eddySmall}
                 contentFit="contain"
