@@ -25,10 +25,10 @@ export default function ReasonScreen({ navigation, route }) {
   const [customIntervalInput, setCustomIntervalInput] = useState("5");
 
   const examples = [
-    { icon: "📚", text: "8 a.m. class and attendance matters" },
-    { icon: "💪", text: "spinning class at the gym" },
-    { icon: "📞", text: "Important client call at 9" },
-    { icon: "✈️", text: "Catch my 6 a.m. flight" },
+    { icon: "🎓", text: "8:00 lecture — prof takes attendance" },
+    { icon: "💼", text: "Morning internship shift — first standup in 15 min" },
+    { icon: "🚂", text: "Catch the 6:40 train — doors close fast" },
+    { icon: "🏓", text: "Padel match at 7:15 — don't bail on your partner" },
   ];
 
   const genres = [
@@ -39,10 +39,10 @@ export default function ReasonScreen({ navigation, route }) {
   ];
 
   const personalities = [
-    { id: "motivational", name: "Motivational", icon: "💪", desc: "Get fired up" },
-    { id: "sassy", name: "Sassy", icon: "😏", desc: "Witty + bold" },
-    { id: "drill-sergeant", name: "Drill", icon: "🎖", desc: "No excuses" },
-    { id: "zen", name: "Zen", icon: "🧘", desc: "Calm focus" },
+    { id: "motivational", name: "Motivational", icon: "⚡", desc: "Get fired up" },
+    { id: "sassy", name: "Sassy", icon: "✨", desc: "Witty + bold" },
+    { id: "drill-sergeant", name: "Drill", icon: "🛡", desc: "No excuses" },
+    { id: "zen", name: "Zen", icon: "🍃", desc: "Calm focus" },
   ];
 
   const intervalOptions = [
@@ -52,7 +52,6 @@ export default function ReasonScreen({ navigation, route }) {
     { value: 15, label: "15 min" },
   ];
 
-  // Clamp interval to valid range (3-3600 minutes)
   const clampIntervalMinutes = (value) => {
     const num = parseInt(value, 10);
     if (isNaN(num) || num < 3) return 3;
@@ -60,7 +59,6 @@ export default function ReasonScreen({ navigation, route }) {
     return num;
   };
 
-  // Get the effective interval in minutes
   const getEffectiveIntervalMinutes = () => {
     if (isCustomInterval) {
       return clampIntervalMinutes(customIntervalInput);
@@ -68,14 +66,12 @@ export default function ReasonScreen({ navigation, route }) {
     return selectedIntervalMinutes;
   };
 
-  // Check if custom input is valid
   const isCustomInputValid = () => {
     if (!isCustomInterval) return true;
     const num = parseInt(customIntervalInput, 10);
     return !isNaN(num) && customIntervalInput.trim() !== "";
   };
 
-  // Show helper text for custom input
   const getCustomHelperText = () => {
     if (!isCustomInterval) return null;
     const num = parseInt(customIntervalInput, 10);
@@ -112,7 +108,7 @@ export default function ReasonScreen({ navigation, route }) {
           <Text style={styles.step}>Step 2 of 4</Text>
         </View>
 
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <Text style={styles.h1}>Personalize your{`\n`}wake-up</Text>
           <Text style={styles.sub}>AI generates a new message every morning.</Text>
 
@@ -142,13 +138,16 @@ export default function ReasonScreen({ navigation, route }) {
             />
           </GlassCard>
 
-          <Text style={[styles.label, { marginTop: 18 }]}>Quick examples</Text>
+          <Text style={[styles.sectionLabel, { marginTop: 18 }]}>QUICK EXAMPLES</Text>
           <View style={{ gap: 10 }}>
             {examples.map((e, idx) => (
               <TouchableOpacity key={idx} activeOpacity={0.9} onPress={() => setReason(e.text)}>
                 <GlassCard style={styles.exampleCard}>
-                  <Text style={styles.exampleIcon}>{e.icon}</Text>
+                  <View style={styles.exampleIconWrap}>
+                    <Text style={styles.exampleIcon}>{e.icon}</Text>
+                  </View>
                   <Text style={styles.exampleText}>{e.text}</Text>
+                  <Text style={styles.exampleChevron}>›</Text>
                 </GlassCard>
               </TouchableOpacity>
             ))}
@@ -262,7 +261,7 @@ export default function ReasonScreen({ navigation, route }) {
             const intervalSeconds = getEffectiveIntervalMinutes() * 60;
             console.log("intervalSeconds ->", intervalSeconds);
             navigation.navigate("ProofMethod", {
-              ...route.params, // contains time + days
+              ...route.params,
               userName,
               reason,
               musicGenre: selectedGenre,
@@ -291,6 +290,15 @@ const styles = StyleSheet.create({
 
   label: { color: theme.colors.textFaint, fontWeight: "900", letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 },
 
+  sectionLabel: {
+    color: theme.colors.textFaint,
+    fontWeight: "900",
+    letterSpacing: 2,
+    textTransform: "uppercase",
+    fontSize: 12,
+    marginBottom: 12,
+  },
+
   input: {
     backgroundColor: "rgba(255,255,255,0.08)",
     borderWidth: 1,
@@ -302,9 +310,37 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 
-  exampleCard: { flexDirection: "row", alignItems: "center", paddingVertical: 14 },
-  exampleIcon: { fontSize: 18, marginRight: 12 },
-  exampleText: { color: theme.colors.text, fontWeight: "800", flex: 1 },
+  exampleCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+  },
+  exampleIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 14,
+  },
+  exampleIcon: { fontSize: 18 },
+  exampleText: {
+    color: theme.colors.text,
+    fontWeight: "800",
+    flex: 1,
+    fontSize: 15,
+    lineHeight: 21,
+  },
+  exampleChevron: {
+    color: theme.colors.textFaint,
+    fontSize: 24,
+    fontWeight: "300",
+    marginLeft: 8,
+  },
 
   sectionTitle: { color: theme.colors.text, fontWeight: "900", fontSize: 18 },
 

@@ -22,7 +22,7 @@ export default function SuccessScreen({ navigation }) {
         <Animated.View style={{ transform: [{ scale: scaleAnim }], alignItems: "center" }}>
           <Image source={require("../assets/eddy/eddy-celebrating.png")} style={styles.eddy} contentFit="contain" />
           <Text style={styles.h1}>Mission complete</Text>
-          <Text style={styles.sub}>Eddy’s lightbulb is ON 💡</Text>
+          <Text style={styles.sub}>Eddy's lightbulb is ON 💡</Text>
         </Animated.View>
 
         <GlassCard style={{ width: "100%", marginTop: 18 }}>

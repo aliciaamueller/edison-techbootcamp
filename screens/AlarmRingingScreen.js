@@ -12,10 +12,6 @@ import { theme } from "../ui/theme";
 import { startRinging, stopRinging } from "../services/alarmEngine";
 import { setAlarmVolume } from "../services/soundManager";
 
-// ─────────────────────────────────────────────────────────────
-// AI MESSAGE TEMPLATES
-// ─────────────────────────────────────────────────────────────
-
 const MESSAGE_TEMPLATES = {
   motivational: [
     (name, why) => `Good morning ${name}! Let's crush ${why} today.`,
@@ -73,10 +69,6 @@ function pickRandomMessage(personality, name, why) {
   return templates[index](name, why);
 }
 
-// ─────────────────────────────────────────────────────────────
-// MAIN COMPONENT
-// ─────────────────────────────────────────────────────────────
-
 export default function AlarmRingingScreen({ navigation, route }) {
   const params = route?.params || {};
   const {
@@ -93,25 +85,20 @@ export default function AlarmRingingScreen({ navigation, route }) {
   const loopTimerRef = useRef(null);
   const isArmedRef = useRef(true);
 
-  const headline = round === 1 ? "WAKE\nUP" : round === 2 ? "STAY\nUP" : "FINAL\nCHECK";
-  const roundLabel = `ROUND ${round} OF 3`;
+  const headline = round === 1 ? "Wake up." : round === 2 ? "Stay up." : "Final check.";
+  const roundLabel = `ROUND ${round}/3`;
 
   const name = userName?.trim() ? userName.trim() : "you";
   const why = reason?.trim() ? reason.trim() : "your goals";
 
-  // Pick a random message once per round
   const spokenMessage = useMemo(() => {
     return pickRandomMessage(aiPersonality, name, why);
   }, [aiPersonality, name, why, round]);
 
-  // ✅ FIXED: Show reason properly — don't split on "." (broke "8 a.m.")
-  // Just trim to max ~8 words for display
-  const shortReason = useMemo(() => {
+  const displayReason = useMemo(() => {
     const r = (reason || "").trim();
     if (!r) return "Wake up";
-    const words = r.split(/\s+/).filter(Boolean);
-    const sliced = words.slice(0, 8).join(" ");
-    return words.length > 8 ? `${sliced}…` : sliced;
+    return r;
   }, [reason]);
 
   const eddyImage =
@@ -120,6 +107,12 @@ export default function AlarmRingingScreen({ navigation, route }) {
       : round === 2
         ? require("../assets/eddy/eddy-running.png")
         : require("../assets/eddy/eddy-happy.png");
+
+  const displayTime = useMemo(() => {
+    if (time) return time;
+    const now = new Date();
+    return now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+  }, [time]);
 
   const speakOnce = async () => {
     try {
@@ -136,7 +129,6 @@ export default function AlarmRingingScreen({ navigation, route }) {
     isArmedRef.current = true;
 
     startRinging({ musicGenre });
-    // Vibration is now handled by startRinging via vibrationController
 
     Speech.stop();
     speakOnce();
@@ -176,32 +168,42 @@ export default function AlarmRingingScreen({ navigation, route }) {
         <View style={styles.center}>
           <Image source={eddyImage} style={styles.eddy} contentFit="contain" />
 
-          <Text style={styles.oneLine}>
-            Eddy is sleepy too — <Text style={styles.oneLineMuted}>help him light up 💡</Text>
-          </Text>
-
           <View style={styles.roundPill}>
             <Text style={styles.roundText}>{roundLabel}</Text>
           </View>
 
-          <Text style={styles.big}>{headline}</Text>
+          <Text style={styles.headline}>{headline}</Text>
 
           <GlassCard style={styles.reasonCard}>
-            {/* ✅ FIXED: Show the wake-up time if available */}
-            {time ? (
-              <Text style={styles.reasonLabel}>⏰ {time}</Text>
-            ) : (
-              <Text style={styles.reasonLabel}>TODAY</Text>
-            )}
-            <Text style={styles.reasonText}>{shortReason}</Text>
+            <Text style={styles.timeLabel}>{displayTime}</Text>
+            <Text style={styles.reasonText}>{displayReason}</Text>
           </GlassCard>
 
-          <Text style={styles.volTiny}>Volume: {volumeLabel}%</Text>
+          <View style={styles.volRow}>
+            <TouchableOpacity
+              style={[styles.volBtn, volumeLabel === 30 && styles.volBtnActive]}
+              onPress={setLow}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.volBtnText}>30%</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.volBtn, volumeLabel === 100 && styles.volBtnActive]}
+              onPress={setFull}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.volBtnText}>100%</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.voiceInfo}>
+            Voice: English • Volume: {volumeLabel}%
+          </Text>
         </View>
 
         <TouchableOpacity activeOpacity={0.92} style={styles.cta} onPress={goToChallenge}>
           <Text style={styles.ctaText}>START CHALLENGE</Text>
-          <Text style={styles.ctaArrow}>→</Text>
+          <Text style={styles.ctaArrow}>›</Text>
         </TouchableOpacity>
       </View>
     </ScreenShell>
@@ -211,89 +213,97 @@ export default function AlarmRingingScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   wrap: {
     flex: 1,
-    paddingBottom: 120,
+    paddingBottom: 14,
   },
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: theme.space.xl,
-    gap: 12,
+    gap: 10,
   },
   eddy: {
-    width: 160,
-    height: 160,
-    marginBottom: 6,
-  },
-  oneLine: {
-    color: theme.colors.text,
-    fontSize: 20,
-    fontWeight: "900",
-    textAlign: "center",
-    letterSpacing: -0.2,
-  },
-  oneLineMuted: {
-    color: theme.colors.textMuted,
-    fontWeight: "900",
+    width: 170,
+    height: 170,
+    marginBottom: 4,
   },
   roundPill: {
-    marginTop: 4,
     paddingVertical: 10,
-    paddingHorizontal: 18,
+    paddingHorizontal: 20,
     borderRadius: theme.radius.pill,
-    backgroundColor: "rgba(255,255,255,0.14)",
+    backgroundColor: "rgba(255,255,255,0.12)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.22)",
+    borderColor: "rgba(255,255,255,0.20)",
   },
   roundText: {
     color: theme.colors.text,
     fontWeight: "900",
-    letterSpacing: 1.2,
+    letterSpacing: 2,
     fontSize: 12,
   },
-  big: {
+  headline: {
     color: theme.colors.text,
-    fontSize: 64,
+    fontSize: 48,
     fontWeight: "900",
     textAlign: "center",
-    letterSpacing: 2,
-    lineHeight: 66,
-    marginTop: 6,
+    letterSpacing: -1,
+    marginTop: 4,
     textShadowColor: "rgba(0,0,0,0.18)",
-    textShadowOffset: { width: 0, height: 8 },
-    textShadowRadius: 14,
+    textShadowOffset: { width: 0, height: 6 },
+    textShadowRadius: 12,
   },
   reasonCard: {
     width: "100%",
-    paddingVertical: 16,
-    alignItems: "center",
+    paddingVertical: 18,
+    paddingHorizontal: 20,
   },
-  reasonLabel: {
+  timeLabel: {
     color: theme.colors.textFaint,
     fontWeight: "900",
     fontSize: 13,
     letterSpacing: 1.5,
     textTransform: "uppercase",
-    marginBottom: 8,
+    marginBottom: 10,
   },
   reasonText: {
     color: theme.colors.text,
     fontWeight: "900",
     fontSize: 22,
-    textAlign: "center",
+    lineHeight: 30,
     letterSpacing: -0.2,
   },
-  volTiny: {
+  volRow: {
+    flexDirection: "row",
+    gap: 12,
+    width: "100%",
+    marginTop: 6,
+  },
+  volBtn: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.10)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.18)",
+    alignItems: "center",
+  },
+  volBtnActive: {
+    backgroundColor: "rgba(255,255,255,0.16)",
+    borderColor: "rgba(255,255,255,0.30)",
+  },
+  volBtnText: {
+    color: theme.colors.text,
+    fontWeight: "900",
+    fontSize: 15,
+  },
+  voiceInfo: {
     color: theme.colors.textFaint,
-    fontWeight: "800",
+    fontWeight: "700",
     fontSize: 13,
-    marginTop: 4,
+    marginTop: 2,
   },
   cta: {
-    position: "absolute",
-    left: theme.space.xl,
-    right: theme.space.xl,
-    bottom: 28,
+    marginHorizontal: 4,
     height: 64,
     borderRadius: 20,
     backgroundColor: "rgba(255,255,255,0.95)",
@@ -317,18 +327,7 @@ const styles = StyleSheet.create({
   },
   ctaArrow: {
     color: "#111",
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: "900",
   },
-  volRow: { flexDirection: "row", gap: 12, width: "100%", marginTop: 4 },
-  volBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.12)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.18)",
-    alignItems: "center",
-  },
-  volBtnText: { color: theme.colors.text, fontWeight: "900" },
 });

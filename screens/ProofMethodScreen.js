@@ -24,7 +24,7 @@ export default function ProofMethodScreen({ navigation, route }) {
         <Text style={styles.step}>Step 3 of 4</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.h1}>How do you want{`\n`}to prove you're awake?</Text>
 
         <View style={{ gap: 12, marginTop: 14 }}>

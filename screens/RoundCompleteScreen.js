@@ -11,7 +11,6 @@ export default function RoundCompleteScreen({ navigation, route }) {
   const [timeLeft, setTimeLeft] = useState(intervalSeconds);
   const timeLeftRef = useRef(intervalSeconds);
 
-  // Format interval for display (e.g., "5 minutes", "20 seconds")
   const intervalLabel = intervalSeconds >= 60
     ? `${Math.round(intervalSeconds / 60)} minute${Math.round(intervalSeconds / 60) !== 1 ? "s" : ""}`
     : `${intervalSeconds} seconds`;
@@ -24,7 +23,6 @@ export default function RoundCompleteScreen({ navigation, route }) {
       if (newVal <= 0) {
         clearInterval(timer);
         setTimeLeft(0);
-        // Navigate OUTSIDE of setState to fix the React error
         navigation.navigate("AlarmRinging", { ...route.params, round: round + 1 });
         return;
       }

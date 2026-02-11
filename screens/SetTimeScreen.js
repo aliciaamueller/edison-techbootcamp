@@ -31,7 +31,7 @@ export default function SetTimeScreen({ navigation }) {
         <Text style={styles.step}>Step 1 of 4</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.h1}>What time do you{`\n`}need to wake up?</Text>
 
         <TouchableOpacity activeOpacity={0.9} onPress={() => setShowPicker(true)}>
@@ -48,7 +48,6 @@ export default function SetTimeScreen({ navigation }) {
               mode="time"
               display="spinner"
               onChange={(event, selectedTime) => {
-                // iOS keeps spinner open, Android closes
                 setShowPicker(Platform.OS === "ios");
                 if (selectedTime) setTime(selectedTime);
               }}
@@ -78,7 +77,7 @@ export default function SetTimeScreen({ navigation }) {
           activeOpacity={0.9}
           onPress={() =>
             navigation.navigate("Reason", {
-              time: formatTime(time), // keep as STRING
+              time: formatTime(time),
               days: selectedDays,
             })
           }
@@ -100,7 +99,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   back: { color: theme.colors.text, fontSize: 30, fontWeight: "700" },
-  step: { color: theme.colors.textFaint, fontWeight: "700" },
+  step: { color: theme.colors.textFaint, fontWeight: "800" },
 
   content: { paddingBottom: 30 },
   h1: {
@@ -146,7 +145,7 @@ const styles = StyleSheet.create({
   cta: {
     height: 62,
     borderRadius: theme.radius.xl,
-    backgroundColor: "rgba(255,255,255,0.88)",
+    backgroundColor: "rgba(255,255,255,0.90)",
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",

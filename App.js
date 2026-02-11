@@ -25,12 +25,9 @@ export default function App() {
     })();
 
     const sub = addNotificationTapListener((data) => {
-      // When user taps notification -> go to AlarmRinging
       if (!navRef.current) return;
 
       navRef.current.navigate("AlarmRinging", {
-        // You can’t recover full config from notification in this simple version,
-        // so we fall back to a demo safe payload.
         userName: "Alicia",
         reason: "your day",
         round: 1,

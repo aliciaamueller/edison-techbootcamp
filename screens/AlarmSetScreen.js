@@ -12,7 +12,6 @@ export default function AlarmSetScreen({ navigation, route }) {
 
   const timeString = typeof time === "string" ? time : "7:00 AM";
 
-  // ✅ CHANGED: label now supports all 3 methods
   const challengeLabel =
     proofMethod === "steps"
       ? "Walk steps"

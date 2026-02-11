@@ -1,5 +1,5 @@
 // screens/WelcomeScreen.js
-import React from "react";
+import React, { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
@@ -8,9 +8,24 @@ import ScreenShell from "../ui/ScreenShell";
 import { theme } from "../ui/theme";
 
 export default function WelcomeScreen({ navigation }) {
+  const [volume, setVolume] = useState(1.0);
+
   return (
     <ScreenShell>
       <View style={styles.wrap}>
+        {/* Volume slider on left edge */}
+        <View style={styles.volumeWrap}>
+          <View style={styles.volumeTrack}>
+            <View style={[styles.volumeFill, { height: `${volume * 100}%` }]} />
+          </View>
+          <TouchableOpacity
+            onPress={() => setVolume(volume > 0.5 ? 0.3 : 1.0)}
+            style={styles.volumeBtn}
+          >
+            <Text style={styles.volumeIcon}>🔊</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Hero */}
         <View style={styles.hero}>
           <Image
@@ -26,9 +41,7 @@ export default function WelcomeScreen({ navigation }) {
           <Text style={styles.brand}>Edison</Text>
           <Text style={styles.tagline}>Wake up. Prove it. Stay awake.</Text>
 
-          <Text style={styles.subtext}>
-            You snooze, you lose.
-          </Text>
+          <Text style={styles.subtext}>You snooze, you lose.</Text>
         </View>
 
         {/* CTA */}
@@ -54,6 +67,38 @@ export default function WelcomeScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, justifyContent: "space-between", paddingBottom: 14 },
+
+  volumeWrap: {
+    position: "absolute",
+    left: -8,
+    top: "33%",
+    zIndex: 10,
+    alignItems: "center",
+    width: 44,
+    gap: 8,
+  },
+  volumeTrack: {
+    width: 6,
+    height: 80,
+    borderRadius: 3,
+    backgroundColor: "rgba(255,255,255,0.18)",
+    overflow: "hidden",
+    justifyContent: "flex-end",
+  },
+  volumeFill: {
+    width: "100%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 3,
+  },
+  volumeBtn: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  volumeIcon: {
+    fontSize: 16,
+  },
 
   hero: {
     flex: 1,
