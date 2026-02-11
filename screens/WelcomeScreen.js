@@ -19,6 +19,7 @@ export default function WelcomeScreen({ navigation }) {
           <View style={styles.volumeTrack}>
             <View style={[styles.volumeFill, { height: `${volume * 100}%` }]} />
           </View>
+
           <TouchableOpacity
             onPress={() => setVolume(volume > 0.5 ? 0.3 : 1.0)}
             style={styles.volumeBtn}
@@ -36,6 +37,7 @@ export default function WelcomeScreen({ navigation }) {
             contentFit="contain"
           />
 
+          {/* No emoji badge */}
           <View style={styles.badge}>
             <Ionicons name="lock-closed" size={14} color="rgba(255,255,255,0.95)" />
             <Text style={styles.badgeText}>No snooze</Text>
@@ -87,11 +89,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     justifyContent: "flex-end",
   },
-  volumeFill: {
-    width: "100%",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 3,
-  },
+  volumeFill: { width: "100%", backgroundColor: "#FFFFFF", borderRadius: 3 },
   volumeBtn: {
     width: 34,
     height: 34,
@@ -103,13 +101,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.14)",
   },
 
-  hero: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingTop: 10,
-  },
-
+  hero: { flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 10 },
   eddy: { width: 200, height: 200, marginBottom: 20 },
 
   badge: {
@@ -131,12 +123,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
 
-  brand: {
-    fontSize: 52,
-    fontWeight: "900",
-    color: theme.colors.text,
-    letterSpacing: -1.5,
-  },
+  brand: { fontSize: 52, fontWeight: "900", color: theme.colors.text, letterSpacing: -1.5 },
 
   tagline: {
     marginTop: 8,
@@ -154,12 +141,7 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
   },
 
-  cta: {
-    borderRadius: theme.radius.xl,
-    overflow: "hidden",
-    marginTop: 14,
-  },
-
+  cta: { borderRadius: theme.radius.xl, overflow: "hidden", marginTop: 14 },
   ctaGrad: {
     paddingVertical: 18,
     alignItems: "center",
@@ -167,10 +149,5 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
   },
-
-  ctaText: {
-    color: theme.colors.buttonTextDark,
-    fontSize: 18,
-    fontWeight: "900",
-  },
+  ctaText: { color: theme.colors.buttonTextDark, fontSize: 18, fontWeight: "900" },
 });

@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Image } from "expo-image";
 import * as Speech from "expo-speech";
+import vibrationController from "../services/vibrationController";
 
 import ScreenShell from "../ui/ScreenShell";
 import GlassCard from "../ui/GlassCard";
@@ -51,8 +52,39 @@ export default function AlarmRingingScreen({ navigation, route }) {
   } = params;
 
   const [volumeLabel, setVolumeLabel] = useState(100);
+  const [englishVoice, setEnglishVoice] = useState(null);
+
   const loopTimerRef = useRef(null);
   const isArmedRef = useRef(true);
+
+  // Load best English voice once (prevents device-language auto-selection)
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const voices = await Speech.getAvailableVoicesAsync();
+        // Prefer enhanced/en-US if present, otherwise any English
+        const en = voices
+          .filter((v) => (v?.language || "").toLowerCase().startsWith("en"))
+          .sort((a, b) => {
+            const aScore =
+              (a.language || "").toLowerCase().startsWith("en-us") ? 3 : 0 +
+              (a.quality || "").toLowerCase() === "enhanced" ? 2 : 0;
+            const bScore =
+              (b.language || "").toLowerCase().startsWith("en-us") ? 3 : 0 +
+              (b.quality || "").toLowerCase() === "enhanced" ? 2 : 0;
+            return bScore - aScore;
+          })[0];
+
+        if (mounted) setEnglishVoice(en || null);
+      } catch {
+        if (mounted) setEnglishVoice(null);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const headline = round === 1 ? "Wake up!" : round === 2 ? "Stay up." : "Final check.";
   const roundLabel = `ROUND ${round}/3`;
@@ -74,8 +106,8 @@ export default function AlarmRingingScreen({ navigation, route }) {
     round === 1
       ? require("../assets/eddy/eddy-sleepy.png")
       : round === 2
-      ? require("../assets/eddy/eddy-running.png")
-      : require("../assets/eddy/eddy-happy.png");
+        ? require("../assets/eddy/eddy-running.png")
+        : require("../assets/eddy/eddy-happy.png");
 
   const displayTime = useMemo(() => {
     if (time) return time;
@@ -86,9 +118,17 @@ export default function AlarmRingingScreen({ navigation, route }) {
   const speakOnce = async () => {
     try {
       if (!isArmedRef.current) return;
+
       const speaking = await Speech.isSpeakingAsync();
       if (speaking) return;
-      Speech.speak(spokenMessage, { rate: 0.95, pitch: 1.0 });
+
+      Speech.speak(spokenMessage, {
+        rate: 0.95,
+        pitch: 1.0,
+        // Force English regardless of device language:
+        language: (englishVoice?.language || "en-US"),
+        voice: englishVoice?.identifier,
+      });
     } catch {
       // ignore
     }
@@ -98,6 +138,7 @@ export default function AlarmRingingScreen({ navigation, route }) {
     isArmedRef.current = true;
 
     startRinging({ musicGenre });
+    vibrationController.startAlarm();
 
     Speech.stop();
     speakOnce();
@@ -110,14 +151,16 @@ export default function AlarmRingingScreen({ navigation, route }) {
       isArmedRef.current = false;
       if (loopTimerRef.current) clearInterval(loopTimerRef.current);
       Speech.stop();
+      vibrationController.stop();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [musicGenre, spokenMessage]);
+  }, [musicGenre, spokenMessage, englishVoice]);
 
   const goToChallenge = () => {
     isArmedRef.current = false;
     if (loopTimerRef.current) clearInterval(loopTimerRef.current);
     Speech.stop();
+
     navigation.navigate("ProofTask", { ...params, round, keepRinging: true });
   };
 
