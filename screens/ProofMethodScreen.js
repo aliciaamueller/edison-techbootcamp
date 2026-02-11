@@ -12,7 +12,7 @@ export default function ProofMethodScreen({ navigation, route }) {
   const methods = [
     { id: "mental", icon: "🧠", name: "Mental Challenge", desc: "Solve a puzzle to prove you're alert" },
     { id: "steps", icon: "👟", name: "Physical — Steps", desc: "Walk steps with your phone" },
-    { id: "camera", icon: "📸", name: "Physical — Camera", desc: "Show your face to the camera" },
+    { id: "camera", icon: "👋", name: "Physical — Hand Wave", desc: "Wave your hand to prove you're awake" },
   ];
 
   return (

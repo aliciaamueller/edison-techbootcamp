@@ -1,7 +1,8 @@
 // services/alarmEngine.js
 import * as Notifications from "expo-notifications";
-import { Platform, Vibration } from "react-native";
+import { Platform } from "react-native";
 import { playAlarmLoop, stopAlarmSound } from "./soundManager";
+import vibrationController from "./vibrationController";
 
 // ✅ Ensure notifications show even in foreground (for demo credibility)
 Notifications.setNotificationHandler({
@@ -63,12 +64,12 @@ export async function cancelAlarmNotification(notificationId) {
 
 export async function startRinging({ musicGenre }) {
   // vibration + in-app sound loop
-  Vibration.vibrate([1000, 500], true);
+  vibrationController.startAlarm();
   await playAlarmLoop(musicGenre || "energetic", 1.0);
 }
 
 export async function stopRinging() {
-  Vibration.cancel();
+  vibrationController.stop();
   await stopAlarmSound();
 }
 

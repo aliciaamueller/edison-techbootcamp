@@ -1,8 +1,9 @@
 // screens/AlarmRingingScreen.js
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Vibration } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Image } from "expo-image";
 import * as Speech from "expo-speech";
+import vibrationController from "../services/vibrationController";
 
 import ScreenShell from "../ui/ScreenShell";
 import GlassCard from "../ui/GlassCard";
@@ -135,7 +136,7 @@ export default function AlarmRingingScreen({ navigation, route }) {
     isArmedRef.current = true;
 
     startRinging({ musicGenre });
-    Vibration.vibrate([0, 900, 500, 900, 500], true);
+    // Vibration is now handled by startRinging via vibrationController
 
     Speech.stop();
     speakOnce();
