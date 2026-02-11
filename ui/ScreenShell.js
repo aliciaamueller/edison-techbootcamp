@@ -1,18 +1,17 @@
 // ui/ScreenShell.js
 import React from "react";
 import { View, StyleSheet, SafeAreaView } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+import Background from "./Background";
 import { theme } from "./theme";
 
 export default function ScreenShell({ children, variant = "base" }) {
-  const colors = theme.gradients[variant] || theme.gradients.base;
-
   return (
-    <LinearGradient colors={colors} style={styles.bg}>
+    <View style={styles.bg}>
+      <Background variant={variant} />
       <SafeAreaView style={styles.safe}>
         <View style={styles.inner}>{children}</View>
       </SafeAreaView>
-    </LinearGradient>
+    </View>
   );
 }
 

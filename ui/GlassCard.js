@@ -9,14 +9,14 @@ export default function GlassCard({ children, style }) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: theme.colors.card,
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
     borderColor: theme.colors.cardBorder,
     borderRadius: theme.radius.xl,
     padding: theme.space.lg,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.18,
+    shadowOpacity: 0.16,
     shadowRadius: 18,
     elevation: 10,
   },

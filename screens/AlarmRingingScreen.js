@@ -3,13 +3,12 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Image } from "expo-image";
 import * as Speech from "expo-speech";
-import vibrationController from "../services/vibrationController";
 
 import ScreenShell from "../ui/ScreenShell";
 import GlassCard from "../ui/GlassCard";
 import { theme } from "../ui/theme";
 
-import { startRinging, stopRinging } from "../services/alarmEngine";
+import { startRinging } from "../services/alarmEngine";
 import { setAlarmVolume } from "../services/soundManager";
 
 const MESSAGE_TEMPLATES = {
@@ -18,48 +17,19 @@ const MESSAGE_TEMPLATES = {
     (name, why) => `Rise and shine ${name}! ${why} isn't going to handle itself. You've got this.`,
     (name, why) => `Hey ${name}, today is YOUR day. Get up and own ${why}.`,
     (name, why) => `${name}, champions don't snooze. Time to show up for ${why}.`,
-    (name, why) => `New day, new wins ${name}. ${why} starts the moment you stand up.`,
-    (name, why) => `${name}, you didn't set this alarm for nothing. ${why} is waiting. Let's go.`,
-    (name, why) => `Good morning ${name}! Every great day starts with one brave move. Get up for ${why}.`,
-    (name, why) => `${name}, your future self will thank you. Time to tackle ${why}.`,
-    (name, why) => `The world needs you awake ${name}. Get up, show up, and crush ${why}.`,
-    (name, why) => `${name}, comfort zone or ${why}? You already know the answer. UP.`,
   ],
   sassy: [
-    (name, why) => `Alright ${name}. Enough. Time to stop negotiating with your pillow and get up for ${why}.`,
-    (name, why) => `${name}, your bed doesn't pay your bills. Get up. ${why} does.`,
-    (name, why) => `Oh, still horizontal ${name}? Cute. ${why} isn't going to do itself.`,
-    (name, why) => `${name}, the snooze button is not your friend. Neither is missing ${why}.`,
-    (name, why) => `Listen ${name}, your pillow doesn't love you. But ${why}? That actually matters.`,
-    (name, why) => `${name}, I will literally not stop until you get up. So let's skip to ${why}.`,
-    (name, why) => `Sleeping beauty called, ${name}. Even they got up eventually. ${why} awaits.`,
-    (name, why) => `${name}, you set me for a reason. Remember? ${why}. Now MOVE.`,
-    (name, why) => `Plot twist ${name}: the alarm wins. Get up for ${why} or I get louder.`,
-    (name, why) => `${name}, every minute in bed is a minute stolen from ${why}. Your call.`,
+    (name, why) => `Alright ${name}. Enough. Get up for ${why}.`,
+    (name, why) => `${name}, your bed doesn't pay your bills. ${why} does.`,
+    (name, why) => `Still horizontal ${name}? Cute. ${why} isn't going to do itself.`,
   ],
   "drill-sergeant": [
-    (name, why) => `UP NOW ${name}! You said ${why}. MOVE. PROVE YOU'RE AWAKE.`,
-    (name, why) => `${name}! On your feet IMMEDIATELY. ${why} doesn't wait for sleepers.`,
-    (name, why) => `ZERO EXCUSES ${name}. You committed to ${why}. NOW EXECUTE.`,
-    (name, why) => `${name}, this is not a drill. Actually it IS a drill. GET UP. ${why}. NOW.`,
-    (name, why) => `I don't care how tired you are ${name}. ${why} is the mission. MOVE IT.`,
-    (name, why) => `${name}! Feet on the floor in 3, 2, 1. ${why} is not optional today.`,
-    (name, why) => `ATTENTION ${name}! You signed up for ${why}. No one forced you. NOW GO.`,
-    (name, why) => `${name}, discipline beats motivation every single morning. UP for ${why}.`,
-    (name, why) => `Your bed is the enemy ${name}. ${why} is the objective. ENGAGE.`,
-    (name, why) => `${name}! Sleep is over. ${why} starts NOW. Do NOT make me repeat myself.`,
+    (name, why) => `UP NOW ${name}! Mission: ${why}. MOVE.`,
+    (name, why) => `${name}! On your feet immediately. ${why} doesn't wait.`,
   ],
   zen: [
-    (name, why) => `Good morning ${name}. Today brings ${why}. Breathe once. Stand up. Begin.`,
+    (name, why) => `Good morning ${name}. Breathe once. Stand up. Begin: ${why}.`,
     (name, why) => `${name}, a new day unfolds gently. ${why} awaits your calm presence.`,
-    (name, why) => `Breathe in ${name}. Breathe out. Now rise softly and greet ${why}.`,
-    (name, why) => `${name}, the morning light is here. Let ${why} guide your first steps today.`,
-    (name, why) => `Stillness was beautiful ${name}. Now, with intention, move toward ${why}.`,
-    (name, why) => `${name}, your body rested. Your mind is ready. ${why} begins with one breath.`,
-    (name, why) => `Gently now ${name}. The world is quiet and ${why} is yours to embrace.`,
-    (name, why) => `${name}, each morning is a small rebirth. Today's purpose: ${why}. Rise.`,
-    (name, why) => `The silence holds space for you ${name}. Carry it with you into ${why}.`,
-    (name, why) => `${name}, you are awake. You are here. ${why} flows naturally from this moment.`,
   ],
 };
 
@@ -81,11 +51,10 @@ export default function AlarmRingingScreen({ navigation, route }) {
   } = params;
 
   const [volumeLabel, setVolumeLabel] = useState(100);
-
   const loopTimerRef = useRef(null);
   const isArmedRef = useRef(true);
 
-  const headline = round === 1 ? "Wake up." : round === 2 ? "Stay up." : "Final check.";
+  const headline = round === 1 ? "Wake up!" : round === 2 ? "Stay up." : "Final check.";
   const roundLabel = `ROUND ${round}/3`;
 
   const name = userName?.trim() ? userName.trim() : "you";
@@ -105,8 +74,8 @@ export default function AlarmRingingScreen({ navigation, route }) {
     round === 1
       ? require("../assets/eddy/eddy-sleepy.png")
       : round === 2
-        ? require("../assets/eddy/eddy-running.png")
-        : require("../assets/eddy/eddy-happy.png");
+      ? require("../assets/eddy/eddy-running.png")
+      : require("../assets/eddy/eddy-happy.png");
 
   const displayTime = useMemo(() => {
     if (time) return time;
@@ -149,7 +118,6 @@ export default function AlarmRingingScreen({ navigation, route }) {
     isArmedRef.current = false;
     if (loopTimerRef.current) clearInterval(loopTimerRef.current);
     Speech.stop();
-
     navigation.navigate("ProofTask", { ...params, round, keepRinging: true });
   };
 
@@ -196,9 +164,7 @@ export default function AlarmRingingScreen({ navigation, route }) {
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.voiceInfo}>
-            Voice: English • Volume: {volumeLabel}%
-          </Text>
+          <Text style={styles.voiceInfo}>Voice: English • Volume: {volumeLabel}%</Text>
         </View>
 
         <TouchableOpacity activeOpacity={0.92} style={styles.cta} onPress={goToChallenge}>
@@ -211,10 +177,7 @@ export default function AlarmRingingScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
-  wrap: {
-    flex: 1,
-    paddingBottom: 14,
-  },
+  wrap: { flex: 1, paddingBottom: 14 },
   center: {
     flex: 1,
     alignItems: "center",
@@ -222,11 +185,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.space.xl,
     gap: 10,
   },
-  eddy: {
-    width: 170,
-    height: 170,
-    marginBottom: 4,
-  },
+  eddy: { width: 170, height: 170, marginBottom: 4 },
+
   roundPill: {
     paddingVertical: 10,
     paddingHorizontal: 20,
@@ -235,12 +195,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.20)",
   },
-  roundText: {
-    color: theme.colors.text,
-    fontWeight: "900",
-    letterSpacing: 2,
-    fontSize: 12,
-  },
+  roundText: { color: theme.colors.text, fontWeight: "900", letterSpacing: 2, fontSize: 12 },
+
   headline: {
     color: theme.colors.text,
     fontSize: 48,
@@ -252,11 +208,8 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 6 },
     textShadowRadius: 12,
   },
-  reasonCard: {
-    width: "100%",
-    paddingVertical: 18,
-    paddingHorizontal: 20,
-  },
+
+  reasonCard: { width: "100%", paddingVertical: 18, paddingHorizontal: 20 },
   timeLabel: {
     color: theme.colors.textFaint,
     fontWeight: "900",
@@ -265,19 +218,9 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     marginBottom: 10,
   },
-  reasonText: {
-    color: theme.colors.text,
-    fontWeight: "900",
-    fontSize: 22,
-    lineHeight: 30,
-    letterSpacing: -0.2,
-  },
-  volRow: {
-    flexDirection: "row",
-    gap: 12,
-    width: "100%",
-    marginTop: 6,
-  },
+  reasonText: { color: theme.colors.text, fontWeight: "900", fontSize: 22, lineHeight: 30 },
+
+  volRow: { flexDirection: "row", gap: 12, width: "100%", marginTop: 6 },
   volBtn: {
     flex: 1,
     paddingVertical: 16,
@@ -287,21 +230,11 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.18)",
     alignItems: "center",
   },
-  volBtnActive: {
-    backgroundColor: "rgba(255,255,255,0.16)",
-    borderColor: "rgba(255,255,255,0.30)",
-  },
-  volBtnText: {
-    color: theme.colors.text,
-    fontWeight: "900",
-    fontSize: 15,
-  },
-  voiceInfo: {
-    color: theme.colors.textFaint,
-    fontWeight: "700",
-    fontSize: 13,
-    marginTop: 2,
-  },
+  volBtnActive: { backgroundColor: "rgba(255,255,255,0.16)", borderColor: "rgba(255,255,255,0.30)" },
+  volBtnText: { color: theme.colors.text, fontWeight: "900", fontSize: 15 },
+
+  voiceInfo: { color: theme.colors.textFaint, fontWeight: "700", fontSize: 13, marginTop: 2 },
+
   cta: {
     marginHorizontal: 4,
     height: 64,
@@ -319,15 +252,6 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 12,
   },
-  ctaText: {
-    color: "#111",
-    fontWeight: "900",
-    fontSize: 18,
-    letterSpacing: 1.2,
-  },
-  ctaArrow: {
-    color: "#111",
-    fontSize: 24,
-    fontWeight: "900",
-  },
+  ctaText: { color: "#111", fontWeight: "900", fontSize: 18, letterSpacing: 1.2 },
+  ctaArrow: { color: "#111", fontSize: 24, fontWeight: "900" },
 });

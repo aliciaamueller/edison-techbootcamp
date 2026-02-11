@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
 
 import ScreenShell from "../ui/ScreenShell";
 import { theme } from "../ui/theme";
@@ -21,8 +22,9 @@ export default function WelcomeScreen({ navigation }) {
           <TouchableOpacity
             onPress={() => setVolume(volume > 0.5 ? 0.3 : 1.0)}
             style={styles.volumeBtn}
+            activeOpacity={0.85}
           >
-            <Text style={styles.volumeIcon}>🔊</Text>
+            <Ionicons name="volume-high" size={18} color="rgba(255,255,255,0.92)" />
           </TouchableOpacity>
         </View>
 
@@ -35,12 +37,12 @@ export default function WelcomeScreen({ navigation }) {
           />
 
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>🔒  No snooze</Text>
+            <Ionicons name="lock-closed" size={14} color="rgba(255,255,255,0.95)" />
+            <Text style={styles.badgeText}>No snooze</Text>
           </View>
 
           <Text style={styles.brand}>Edison</Text>
           <Text style={styles.tagline}>Wake up. Prove it. Stay awake.</Text>
-
           <Text style={styles.subtext}>You snooze, you lose.</Text>
         </View>
 
@@ -57,7 +59,7 @@ export default function WelcomeScreen({ navigation }) {
             style={styles.ctaGrad}
           >
             <Text style={styles.ctaText}>Set up alarm</Text>
-            <Text style={styles.ctaArrow}>→</Text>
+            <Ionicons name="arrow-forward" size={20} color={theme.colors.buttonTextDark} />
           </LinearGradient>
         </TouchableOpacity>
       </View>
@@ -91,13 +93,14 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   volumeBtn: {
-    width: 32,
-    height: 32,
+    width: 34,
+    height: 34,
     alignItems: "center",
     justifyContent: "center",
-  },
-  volumeIcon: {
-    fontSize: 16,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.14)",
   },
 
   hero: {
@@ -110,6 +113,9 @@ const styles = StyleSheet.create({
   eddy: { width: 200, height: 200, marginBottom: 20 },
 
   badge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
     backgroundColor: "rgba(255,255,255,0.12)",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.18)",
@@ -165,12 +171,6 @@ const styles = StyleSheet.create({
   ctaText: {
     color: theme.colors.buttonTextDark,
     fontSize: 18,
-    fontWeight: "900",
-  },
-
-  ctaArrow: {
-    color: theme.colors.buttonTextDark,
-    fontSize: 20,
     fontWeight: "900",
   },
 });

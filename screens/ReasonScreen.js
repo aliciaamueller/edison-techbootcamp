@@ -1,5 +1,5 @@
 // screens/ReasonScreen.js
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -10,10 +10,19 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 import ScreenShell from "../ui/ScreenShell";
 import GlassCard from "../ui/GlassCard";
 import { theme } from "../ui/theme";
+
+function IconChip({ name }) {
+  return (
+    <View style={styles.iconChip}>
+      <Ionicons name={name} size={18} color="rgba(255,255,255,0.92)" />
+    </View>
+  );
+}
 
 export default function ReasonScreen({ navigation, route }) {
   const [reason, setReason] = useState("");
@@ -25,24 +34,24 @@ export default function ReasonScreen({ navigation, route }) {
   const [customIntervalInput, setCustomIntervalInput] = useState("5");
 
   const examples = [
-    { icon: "🎓", text: "8:00 lecture — prof takes attendance" },
-    { icon: "💼", text: "Morning internship shift — first standup in 15 min" },
-    { icon: "🚂", text: "Catch the 6:40 train — doors close fast" },
-    { icon: "🏓", text: "Padel match at 7:15 — don't bail on your partner" },
+    { icon: "school-outline", text: "8:00 lecture — prof takes attendance" },
+    { icon: "briefcase-outline", text: "Morning internship shift — first standup in 15 min" },
+    { icon: "train-outline", text: "Catch the 6:40 train — doors close fast" },
+    { icon: "tennisball-outline", text: "Padel match at 7:15 — don't bail on your partner" },
   ];
 
   const genres = [
-    { id: "energetic", name: "Energetic", icon: "⚡", desc: "High-energy beats" },
-    { id: "calm", name: "Calm", icon: "🌊", desc: "Peaceful sounds" },
-    { id: "rock", name: "Rock", icon: "🎸", desc: "Wake up loud" },
-    { id: "electronic", name: "Electronic", icon: "🎵", desc: "Synth vibes" },
+    { id: "energetic", name: "Energetic", icon: "flash-outline", desc: "High-energy beats" },
+    { id: "calm", name: "Calm", icon: "water-outline", desc: "Peaceful sounds" },
+    { id: "rock", name: "Rock", icon: "musical-notes-outline", desc: "Wake up loud" },
+    { id: "electronic", name: "Electronic", icon: "headset-outline", desc: "Synth vibes" },
   ];
 
   const personalities = [
-    { id: "motivational", name: "Motivational", icon: "⚡", desc: "Get fired up" },
-    { id: "sassy", name: "Sassy", icon: "✨", desc: "Witty + bold" },
-    { id: "drill-sergeant", name: "Drill", icon: "🛡", desc: "No excuses" },
-    { id: "zen", name: "Zen", icon: "🍃", desc: "Calm focus" },
+    { id: "motivational", name: "Motivational", icon: "flash-outline", desc: "Get fired up" },
+    { id: "sassy", name: "Sassy", icon: "sparkles-outline", desc: "Witty + bold" },
+    { id: "drill-sergeant", name: "Drill", icon: "shield-checkmark-outline", desc: "No excuses" },
+    { id: "zen", name: "Zen", icon: "leaf-outline", desc: "Calm focus" },
   ];
 
   const intervalOptions = [
@@ -60,59 +69,142 @@ export default function ReasonScreen({ navigation, route }) {
   };
 
   const getEffectiveIntervalMinutes = () => {
-    if (isCustomInterval) {
-      return clampIntervalMinutes(customIntervalInput);
-    }
+    if (isCustomInterval) return clampIntervalMinutes(customIntervalInput);
     return selectedIntervalMinutes;
   };
 
-  const isCustomInputValid = () => {
-    if (!isCustomInterval) return true;
-    const num = parseInt(customIntervalInput, 10);
-    return !isNaN(num) && customIntervalInput.trim() !== "";
-  };
-
-  const getCustomHelperText = () => {
+  const customHelper = useMemo(() => {
     if (!isCustomInterval) return null;
     const num = parseInt(customIntervalInput, 10);
-    if (isNaN(num) || customIntervalInput.trim() === "") {
-      return "Please enter a valid number";
-    }
-    if (num < 3) {
-      return "Minimum is 3 minutes (will be set to 3)";
-    }
-    if (num > 3600) {
-      return "Maximum is 3600 minutes (will be set to 3600)";
-    }
+    if (isNaN(num) || customIntervalInput.trim() === "") return "Please enter a valid number";
+    if (num < 3) return "Minimum is 3 minutes (will be set to 3)";
+    if (num > 3600) return "Maximum is 3600 minutes (will be set to 3600)";
     return null;
-  };
+  }, [customIntervalInput, isCustomInterval]);
 
-  const preview =
-    selectedPersonality === "sassy"
-      ? `"Wake up ${userName || "you"}! Time to stop dreaming about ${reason || "success"} and do it!"`
-      : selectedPersonality === "drill-sergeant"
-        ? `"UP NOW ${userName || "you"}! You signed up for ${reason || "this"}. MOVE!"`
-        : selectedPersonality === "zen"
-          ? `"Good morning ${userName || "you"}. Today brings ${reason || "new opportunities"}. Breathe and begin."`
-          : `"Rise and shine ${userName || "you"}! Today you're crushing ${reason || "your goals"}. Let's go!"`;
+  const preview = useMemo(() => {
+    const name = userName?.trim() ? userName.trim() : "you";
+    const why = reason?.trim() ? reason.trim() : "today";
+    if (selectedPersonality === "sassy") return `"Wake up ${name}! Your pillow is lying to you. ${why}. Now."`;
+    if (selectedPersonality === "drill-sergeant") return `"UP NOW ${name}! Mission: ${why}. MOVE."`;
+    if (selectedPersonality === "zen") return `"Good morning ${name}. Breathe once. Then begin: ${why}."`;
+    return `"Rise and shine ${name}! ${why} starts the moment you stand up."`;
+  }, [reason, selectedPersonality, userName]);
 
-  const canContinue = !!userName && !!reason && isCustomInputValid();
+  const canContinue = !!userName.trim() && !!reason.trim() && (!isCustomInterval || !customHelper);
 
   return (
     <ScreenShell variant="base">
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.back}>←</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.8} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={20} color={theme.colors.text} />
           </TouchableOpacity>
           <Text style={styles.step}>Step 2 of 4</Text>
         </View>
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <Text style={styles.h1}>Personalize your{`\n`}wake-up</Text>
-          <Text style={styles.sub}>AI generates a new message every morning.</Text>
+          <Text style={styles.sectionLabel}>QUICK EXAMPLES</Text>
 
-          <GlassCard style={{ marginTop: 10 }}>
+          <View style={{ gap: 12 }}>
+            {examples.map((e, idx) => (
+              <TouchableOpacity key={idx} activeOpacity={0.9} onPress={() => setReason(e.text)}>
+                <GlassCard style={styles.exampleCard}>
+                  <IconChip name={e.icon} />
+                  <Text style={styles.exampleText}>{e.text}</Text>
+                  <Ionicons name="chevron-forward" size={18} color={theme.colors.textFaint} />
+                </GlassCard>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={[styles.sectionTitle, { marginTop: 22 }]}>AI personality</Text>
+          <View style={styles.grid}>
+            {personalities.map((p) => {
+              const active = selectedPersonality === p.id;
+              return (
+                <TouchableOpacity
+                  key={p.id}
+                  activeOpacity={0.9}
+                  onPress={() => setSelectedPersonality(p.id)}
+                  style={[styles.pickCard, active && styles.pickCardActive]}
+                >
+                  <Ionicons name={p.icon} size={22} color="rgba(255,255,255,0.92)" />
+                  <Text style={styles.pickTitle}>{p.name}</Text>
+                  <Text style={styles.pickDesc}>{p.desc}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <Text style={[styles.sectionTitle, { marginTop: 18 }]}>Alarm sound</Text>
+          <View style={styles.grid}>
+            {genres.map((g) => {
+              const active = selectedGenre === g.id;
+              return (
+                <TouchableOpacity
+                  key={g.id}
+                  activeOpacity={0.9}
+                  onPress={() => setSelectedGenre(g.id)}
+                  style={[styles.pickCard, active && styles.pickCardActive]}
+                >
+                  <Ionicons name={g.icon} size={22} color="rgba(255,255,255,0.92)" />
+                  <Text style={styles.pickTitle}>{g.name}</Text>
+                  <Text style={styles.pickDesc}>{g.desc}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <Text style={[styles.sectionTitle, { marginTop: 18 }]}>Check-in interval</Text>
+          <View style={styles.grid}>
+            {intervalOptions.map((opt) => {
+              const active = !isCustomInterval && selectedIntervalMinutes === opt.value;
+              return (
+                <TouchableOpacity
+                  key={opt.value}
+                  activeOpacity={0.9}
+                  onPress={() => {
+                    setIsCustomInterval(false);
+                    setSelectedIntervalMinutes(opt.value);
+                  }}
+                  style={[styles.pickCard, active && styles.pickCardActive]}
+                >
+                  <Ionicons name="timer-outline" size={22} color="rgba(255,255,255,0.92)" />
+                  <Text style={styles.pickTitle}>{opt.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => setIsCustomInterval(true)}
+              style={[styles.pickCard, isCustomInterval && styles.pickCardActive]}
+            >
+              <Ionicons name="create-outline" size={22} color="rgba(255,255,255,0.92)" />
+              <Text style={styles.pickTitle}>Custom</Text>
+            </TouchableOpacity>
+          </View>
+
+          {isCustomInterval && (
+            <GlassCard style={{ marginTop: 12 }}>
+              <Text style={styles.label}>Custom interval (minutes)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. 7"
+                placeholderTextColor="rgba(255,255,255,0.40)"
+                value={customIntervalInput}
+                onChangeText={setCustomIntervalInput}
+                keyboardType="numeric"
+              />
+              {!!customHelper && <Text style={styles.helperText}>{customHelper}</Text>}
+            </GlassCard>
+          )}
+
+          <Text style={styles.intervalNote}>
+            Minimum 3 minutes. For demo the app uses a shorter internal timer.
+          </Text>
+
+          <GlassCard style={{ marginTop: 18 }}>
             <Text style={styles.label}>Your name</Text>
             <TextInput
               style={styles.input}
@@ -138,142 +230,41 @@ export default function ReasonScreen({ navigation, route }) {
             />
           </GlassCard>
 
-          <Text style={[styles.sectionLabel, { marginTop: 18 }]}>QUICK EXAMPLES</Text>
-          <View style={{ gap: 10 }}>
-            {examples.map((e, idx) => (
-              <TouchableOpacity key={idx} activeOpacity={0.9} onPress={() => setReason(e.text)}>
-                <GlassCard style={styles.exampleCard}>
-                  <View style={styles.exampleIconWrap}>
-                    <Text style={styles.exampleIcon}>{e.icon}</Text>
-                  </View>
-                  <Text style={styles.exampleText}>{e.text}</Text>
-                  <Text style={styles.exampleChevron}>›</Text>
-                </GlassCard>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <Text style={[styles.sectionTitle, { marginTop: 20 }]}>AI personality</Text>
-          <View style={styles.grid}>
-            {personalities.map((p) => {
-              const active = selectedPersonality === p.id;
-              return (
-                <TouchableOpacity
-                  key={p.id}
-                  activeOpacity={0.9}
-                  onPress={() => setSelectedPersonality(p.id)}
-                  style={[styles.cardPick, active && styles.cardPickActive]}
-                >
-                  <Text style={styles.pickIcon}>{p.icon}</Text>
-                  <Text style={styles.pickTitle}>{p.name}</Text>
-                  <Text style={styles.pickDesc}>{p.desc}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          <Text style={[styles.sectionTitle, { marginTop: 18 }]}>Alarm sound</Text>
-          <View style={styles.grid}>
-            {genres.map((g) => {
-              const active = selectedGenre === g.id;
-              return (
-                <TouchableOpacity
-                  key={g.id}
-                  activeOpacity={0.9}
-                  onPress={() => setSelectedGenre(g.id)}
-                  style={[styles.cardPick, active && styles.cardPickActive]}
-                >
-                  <Text style={styles.pickIcon}>{g.icon}</Text>
-                  <Text style={styles.pickTitle}>{g.name}</Text>
-                  <Text style={styles.pickDesc}>{g.desc}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          <Text style={[styles.sectionTitle, { marginTop: 18 }]}>Check-in interval</Text>
-          <View style={styles.grid}>
-            {intervalOptions.map((opt) => {
-              const active = !isCustomInterval && selectedIntervalMinutes === opt.value;
-              return (
-                <TouchableOpacity
-                  key={opt.value}
-                  activeOpacity={0.9}
-                  onPress={() => {
-                    setIsCustomInterval(false);
-                    setSelectedIntervalMinutes(opt.value);
-                  }}
-                  style={[styles.cardPick, active && styles.cardPickActive]}
-                >
-                  <Text style={styles.pickIcon}>⏱</Text>
-                  <Text style={styles.pickTitle}>{opt.label}</Text>
-                </TouchableOpacity>
-              );
-            })}
-            <TouchableOpacity
-              activeOpacity={0.9}
-              onPress={() => setIsCustomInterval(true)}
-              style={[styles.cardPick, isCustomInterval && styles.cardPickActive]}
-            >
-              <Text style={styles.pickIcon}>✏️</Text>
-              <Text style={styles.pickTitle}>Custom</Text>
-            </TouchableOpacity>
-          </View>
-
-          {isCustomInterval && (
-            <GlassCard style={{ marginTop: 12 }}>
-              <Text style={styles.label}>Custom interval (minutes)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. 7"
-                placeholderTextColor="rgba(255,255,255,0.40)"
-                value={customIntervalInput}
-                onChangeText={setCustomIntervalInput}
-                keyboardType="numeric"
-              />
-              {getCustomHelperText() && (
-                <Text style={styles.helperText}>{getCustomHelperText()}</Text>
-              )}
-            </GlassCard>
-          )}
-
-          <Text style={styles.intervalNote}>
-            Minimum 3 minutes. For demo the app uses a shorter internal timer.
-          </Text>
-
-          {(userName || reason) && (
+          {(userName.trim() || reason.trim()) && (
             <GlassCard style={{ marginTop: 18 }}>
               <Text style={styles.label}>Sample AI message</Text>
               <Text style={styles.preview}>{preview}</Text>
-              <Text style={styles.previewNote}>✨ New variations every morning</Text>
+              <Text style={styles.previewNote}>New variations every morning</Text>
             </GlassCard>
           )}
 
-          <View style={{ height: 90 }} />
+          <View style={{ height: 110 }} />
         </ScrollView>
 
-        <TouchableOpacity
-          activeOpacity={0.9}
-          disabled={!canContinue}
-          style={[styles.cta, !canContinue && { opacity: 0.55 }]}
-          onPress={() => {
-            if (!canContinue) return;
-            const intervalSeconds = getEffectiveIntervalMinutes() * 60;
-            console.log("intervalSeconds ->", intervalSeconds);
-            navigation.navigate("ProofMethod", {
-              ...route.params,
-              userName,
-              reason,
-              musicGenre: selectedGenre,
-              aiPersonality: selectedPersonality,
-              intervalSeconds,
-              round: 1,
-            });
-          }}
-        >
-          <Text style={styles.ctaText}>Next</Text>
-          <Text style={styles.ctaArrow}>→</Text>
-        </TouchableOpacity>
+        {/* Bottom glass CTA (like the screenshots) */}
+        <View style={styles.bottomBar}>
+          <TouchableOpacity
+            activeOpacity={0.9}
+            disabled={!canContinue}
+            style={[styles.cta, !canContinue && { opacity: 0.55 }]}
+            onPress={() => {
+              if (!canContinue) return;
+              const intervalSeconds = getEffectiveIntervalMinutes() * 60;
+              navigation.navigate("ProofMethod", {
+                ...route.params,
+                userName: userName.trim(),
+                reason: reason.trim(),
+                musicGenre: selectedGenre,
+                aiPersonality: selectedPersonality,
+                intervalSeconds,
+                round: 1,
+              });
+            }}
+          >
+            <Text style={styles.ctaText}>Next</Text>
+            <Ionicons name="arrow-forward" size={20} color={theme.colors.buttonTextDark} />
+          </TouchableOpacity>
+        </View>
       </KeyboardAvoidingView>
     </ScreenShell>
   );
@@ -281,14 +272,19 @@ export default function ReasonScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  back: { color: theme.colors.text, fontSize: 30, fontWeight: "700" },
+  backBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.10)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.16)",
+  },
   step: { color: theme.colors.textFaint, fontWeight: "800" },
 
   content: { paddingBottom: 20 },
-  h1: { color: theme.colors.text, fontSize: 40, fontWeight: "900", letterSpacing: -1, lineHeight: 46 },
-  sub: { color: theme.colors.textMuted, fontWeight: "700", marginTop: 10 },
-
-  label: { color: theme.colors.textFaint, fontWeight: "900", letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 },
 
   sectionLabel: {
     color: theme.colors.textFaint,
@@ -297,6 +293,66 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     fontSize: 12,
     marginBottom: 12,
+    marginTop: 8,
+  },
+
+  sectionTitle: { color: theme.colors.text, fontWeight: "900", fontSize: 22 },
+
+  exampleCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+  },
+
+  iconChip: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.14)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 14,
+  },
+
+  exampleText: {
+    color: theme.colors.text,
+    fontWeight: "800",
+    flex: 1,
+    fontSize: 15,
+    lineHeight: 21,
+  },
+
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginTop: 12 },
+
+  pickCard: {
+    width: "48%",
+    backgroundColor: "rgba(255,255,255,0.10)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.16)",
+    borderRadius: theme.radius.xl,
+    padding: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    minHeight: 106,
+  },
+  pickCardActive: {
+    backgroundColor: "rgba(255,255,255,0.14)",
+    borderColor: "rgba(255,255,255,0.28)",
+  },
+  pickTitle: { color: theme.colors.text, fontWeight: "900", fontSize: 16, marginTop: 4 },
+  pickDesc: { color: theme.colors.textFaint, fontWeight: "700", fontSize: 12 },
+
+  label: {
+    color: theme.colors.textFaint,
+    fontWeight: "900",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    marginBottom: 10,
+    fontSize: 12,
   },
 
   input: {
@@ -310,74 +366,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 
-  exampleCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-  },
-  exampleIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.08)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 14,
-  },
-  exampleIcon: { fontSize: 18 },
-  exampleText: {
+  preview: {
     color: theme.colors.text,
     fontWeight: "800",
-    flex: 1,
-    fontSize: 15,
-    lineHeight: 21,
+    fontStyle: "italic",
+    lineHeight: 22,
+    marginTop: 6,
   },
-  exampleChevron: {
-    color: theme.colors.textFaint,
-    fontSize: 24,
-    fontWeight: "300",
-    marginLeft: 8,
-  },
-
-  sectionTitle: { color: theme.colors.text, fontWeight: "900", fontSize: 18 },
-
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 12 },
-
-  cardPick: {
-    width: "48%",
-    backgroundColor: "rgba(255,255,255,0.08)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.16)",
-    borderRadius: theme.radius.xl,
-    padding: 14,
-    alignItems: "center",
-  },
-  cardPickActive: { backgroundColor: "rgba(255,255,255,0.14)", borderColor: "rgba(255,255,255,0.30)" },
-  pickIcon: { fontSize: 28, marginBottom: 8 },
-  pickTitle: { color: theme.colors.text, fontWeight: "900" },
-  pickDesc: { color: theme.colors.textFaint, fontWeight: "700", fontSize: 12, marginTop: 4 },
-
-  preview: { color: theme.colors.text, fontWeight: "800", fontStyle: "italic", lineHeight: 22, marginTop: 6 },
   previewNote: { color: theme.colors.textFaint, fontWeight: "700", marginTop: 10 },
-
-  cta: {
-    position: "absolute",
-    left: theme.space.xl,
-    right: theme.space.xl,
-    bottom: theme.space.xl,
-    height: 62,
-    borderRadius: theme.radius.xl,
-    backgroundColor: "rgba(255,255,255,0.90)",
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: 10,
-  },
-  ctaText: { color: theme.colors.buttonTextDark, fontWeight: "900", fontSize: 18 },
-  ctaArrow: { color: theme.colors.buttonTextDark, fontWeight: "900", fontSize: 20 },
 
   helperText: {
     color: theme.colors.textMuted,
@@ -393,4 +389,29 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontStyle: "italic",
   },
+
+  bottomBar: {
+    position: "absolute",
+    left: theme.space.xl,
+    right: theme.space.xl,
+    bottom: theme.space.xl,
+  },
+
+  cta: {
+    height: 62,
+    borderRadius: theme.radius.xl,
+    backgroundColor: "rgba(255,255,255,0.90)",
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 10,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.06)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  ctaText: { color: theme.colors.buttonTextDark, fontWeight: "900", fontSize: 18 },
 });
