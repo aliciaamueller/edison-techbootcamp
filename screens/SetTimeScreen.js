@@ -2,16 +2,18 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { Ionicons } from "@expo/vector-icons";
 
 import ScreenShell from "../ui/ScreenShell";
 import GlassCard from "../ui/GlassCard";
 import { theme } from "../ui/theme";
 
-export default function SetTimeScreen({ navigation }) {
+export default function SetTimeScreen({ navigation, route }) {
   const [time, setTime] = useState(new Date());
   const [showPicker, setShowPicker] = useState(false);
   const [selectedDays, setSelectedDays] = useState(["Mon", "Tue", "Wed", "Thu", "Fri"]);
 
+  const userRole = route.params?.userRole || "other";
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
   const toggleDay = (day) => {
@@ -25,8 +27,12 @@ export default function SetTimeScreen({ navigation }) {
   return (
     <ScreenShell variant="base">
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.back}>←</Text>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.8}
+          style={styles.backBtn}
+        >
+          <Ionicons name="arrow-back" size={20} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.step}>Step 1 of 4</Text>
       </View>
@@ -79,6 +85,7 @@ export default function SetTimeScreen({ navigation }) {
             navigation.navigate("Reason", {
               time: formatTime(time),
               days: selectedDays,
+              userRole,
             })
           }
         >
@@ -98,7 +105,16 @@ const styles = StyleSheet.create({
     paddingTop: 6,
     marginBottom: 12,
   },
-  back: { color: theme.colors.text, fontSize: 30, fontWeight: "700" },
+  backBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.10)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.16)",
+  },
   step: { color: theme.colors.textFaint, fontWeight: "800" },
 
   content: { paddingBottom: 30 },

@@ -16,6 +16,52 @@ import ScreenShell from "../ui/ScreenShell";
 import GlassCard from "../ui/GlassCard";
 import { theme } from "../ui/theme";
 
+// ─────────────────────────────────────────────────────────────
+// ROLE-BASED QUICK EXAMPLES (3 tailored examples per role)
+// ─────────────────────────────────────────────────────────────
+const ROLE_EXAMPLES = {
+  student: [
+    { icon: "school-outline", text: "8:00 lecture — prof takes attendance" },
+    { icon: "document-text-outline", text: "Final exam at 9 AM — can't be late" },
+    { icon: "library-outline", text: "Group study session at 7:30 — team counts on you" },
+  ],
+  professional: [
+    { icon: "briefcase-outline", text: "Morning standup at 9 — team is waiting" },
+    { icon: "videocam-outline", text: "Client presentation at 8:30 — first impressions matter" },
+    { icon: "train-outline", text: "Catch the 7:15 commuter train — no second chances" },
+  ],
+  "flight-crew": [
+    { icon: "airplane-outline", text: "6 AM flight — boarding starts in 90 min" },
+    { icon: "time-outline", text: "Crew briefing at 5:30 — can't miss check-in" },
+    { icon: "globe-outline", text: "Layover alarm — adjust to new time zone now" },
+  ],
+  health: [
+    { icon: "medkit-outline", text: "Morning medication at 7 AM — take with food" },
+    { icon: "heart-outline", text: "Blood pressure check before breakfast" },
+    { icon: "calendar-outline", text: "Doctor's appointment at 8:30 — fasting required" },
+  ],
+  "shift-worker": [
+    { icon: "moon-outline", text: "Night shift starts at 10 PM — prep time" },
+    { icon: "alarm-outline", text: "Early shift at 5 AM — factory floor waits for no one" },
+    { icon: "swap-horizontal-outline", text: "Rotating shift switch — reset your clock now" },
+  ],
+  parent: [
+    { icon: "bus-outline", text: "School bus at 7:20 — kids need breakfast first" },
+    { icon: "people-outline", text: "Daycare drop-off by 8 — no late pickups" },
+    { icon: "nutrition-outline", text: "Pack lunches before 7 — morning routine starts now" },
+  ],
+  athlete: [
+    { icon: "barbell-outline", text: "Gym session at 6 AM — coach is timing you" },
+    { icon: "football-outline", text: "Match day warm-up at 7:30 — don't bail on the team" },
+    { icon: "bicycle-outline", text: "Morning run at 5:30 — beat yesterday's time" },
+  ],
+  other: [
+    { icon: "sunny-outline", text: "Start the day right — no more oversleeping" },
+    { icon: "rocket-outline", text: "Important errand at 8 AM — doors open early" },
+    { icon: "cafe-outline", text: "Coffee date at 9 — don't keep them waiting" },
+  ],
+};
+
 function IconChip({ name }) {
   return (
     <View style={styles.iconChip}>
@@ -33,12 +79,8 @@ export default function ReasonScreen({ navigation, route }) {
   const [isCustomInterval, setIsCustomInterval] = useState(false);
   const [customIntervalInput, setCustomIntervalInput] = useState("5");
 
-  const examples = [
-    { icon: "school-outline", text: "8:00 lecture — prof takes attendance" },
-    { icon: "briefcase-outline", text: "Morning internship shift — first standup in 15 min" },
-    { icon: "train-outline", text: "Catch the 6:40 train — doors close fast" },
-    { icon: "tennisball-outline", text: "Padel match at 7:15 — don't bail on your partner" },
-  ];
+  const userRole = route.params?.userRole || "other";
+  const examples = ROLE_EXAMPLES[userRole] || ROLE_EXAMPLES.other;
 
   const genres = [
     { id: "energetic", name: "Energetic", icon: "flash-outline", desc: "High-energy beats" },
@@ -104,6 +146,19 @@ export default function ReasonScreen({ navigation, route }) {
         </View>
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          {/* Accountability + Discount reminder */}
+          <GlassCard style={styles.accountabilityCard}>
+            <View style={styles.accountabilityRow}>
+              <Ionicons name="shield-checkmark" size={20} color="#46F2A2" />
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={styles.accountabilityTitle}>Accountability pays off</Text>
+                <Text style={styles.accountabilityText}>
+                  Hit your wake goal consistently and your monthly drops from €1.99 → €0.99
+                </Text>
+              </View>
+            </View>
+          </GlassCard>
+
           <Text style={styles.sectionLabel}>QUICK EXAMPLES</Text>
 
           <View style={{ gap: 12 }}>
@@ -241,7 +296,7 @@ export default function ReasonScreen({ navigation, route }) {
           <View style={{ height: 110 }} />
         </ScrollView>
 
-        {/* Bottom glass CTA (like the screenshots) */}
+        {/* Bottom glass CTA */}
         <View style={styles.bottomBar}>
           <TouchableOpacity
             activeOpacity={0.9}
@@ -285,6 +340,29 @@ const styles = StyleSheet.create({
   step: { color: theme.colors.textFaint, fontWeight: "800" },
 
   content: { paddingBottom: 20 },
+
+  accountabilityCard: {
+    marginBottom: 18,
+    marginTop: 8,
+    backgroundColor: "rgba(70,242,162,0.08)",
+    borderColor: "rgba(70,242,162,0.22)",
+  },
+  accountabilityRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  accountabilityTitle: {
+    color: "#46F2A2",
+    fontWeight: "900",
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  accountabilityText: {
+    color: theme.colors.textMuted,
+    fontWeight: "700",
+    fontSize: 13,
+    lineHeight: 19,
+  },
 
   sectionLabel: {
     color: theme.colors.textFaint,

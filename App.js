@@ -3,6 +3,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import WelcomeScreen from "./screens/WelcomeScreen";
+import RoleSelectScreen from "./screens/RoleSelectScreen";
 import SetTimeScreen from "./screens/SetTimeScreen";
 import ReasonScreen from "./screens/ReasonScreen";
 import ProofMethodScreen from "./screens/ProofMethodScreen";
@@ -28,7 +29,7 @@ export default function App() {
       if (!navRef.current) return;
 
       navRef.current.navigate("AlarmRinging", {
-        userName: "Alicia",
+        userName: "User",
         reason: "your day",
         round: 1,
         proofMethod: "steps",
@@ -44,6 +45,7 @@ export default function App() {
     <NavigationContainer ref={navRef}>
       <Stack.Navigator initialRouteName="Welcome" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Welcome" component={WelcomeScreen} />
+        <Stack.Screen name="RoleSelect" component={RoleSelectScreen} />
         <Stack.Screen name="SetTime" component={SetTimeScreen} />
         <Stack.Screen name="Reason" component={ReasonScreen} />
         <Stack.Screen name="ProofMethod" component={ProofMethodScreen} />

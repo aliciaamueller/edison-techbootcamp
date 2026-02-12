@@ -27,8 +27,21 @@ export default function SuccessScreen({ navigation }) {
 
         <GlassCard style={{ width: "100%", marginTop: 18 }}>
           <Text style={styles.msg}>
-            You powered through. 🎉{`\n`}Time to conquer the day.
+            You powered through all 3 rounds. 🎉{`\n`}Time to conquer the day.
           </Text>
+        </GlassCard>
+
+        {/* Accountability streak card */}
+        <GlassCard style={styles.streakCard}>
+          <View style={styles.streakRow}>
+            <Text style={styles.streakEmoji}>🔥</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.streakTitle}>Accountability streak +1</Text>
+              <Text style={styles.streakText}>
+                Keep waking up on time to unlock your discount — €1.99 → €0.99/mo
+              </Text>
+            </View>
+          </View>
         </GlassCard>
 
         <TouchableOpacity style={styles.cta} activeOpacity={0.9} onPress={() => navigation.navigate("Welcome")}>
@@ -42,12 +55,37 @@ export default function SuccessScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  eddy: { width: 220, height: 220, marginBottom: 10 },
+  eddy: { width: 200, height: 200, marginBottom: 10 },
 
   h1: { color: theme.colors.text, fontSize: 44, fontWeight: "900", letterSpacing: -1 },
   sub: { color: "rgba(255,255,255,0.86)", fontWeight: "800", marginTop: 10 },
 
   msg: { color: theme.colors.text, fontWeight: "900", textAlign: "center", lineHeight: 24, fontSize: 16 },
+
+  streakCard: {
+    width: "100%",
+    marginTop: 14,
+    backgroundColor: "rgba(255,216,77,0.10)",
+    borderColor: "rgba(255,216,77,0.25)",
+  },
+  streakRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  streakEmoji: { fontSize: 28 },
+  streakTitle: {
+    color: "#FFD84D",
+    fontWeight: "900",
+    fontSize: 15,
+    marginBottom: 4,
+  },
+  streakText: {
+    color: theme.colors.textMuted,
+    fontWeight: "700",
+    fontSize: 13,
+    lineHeight: 19,
+  },
 
   cta: {
     marginTop: 18,

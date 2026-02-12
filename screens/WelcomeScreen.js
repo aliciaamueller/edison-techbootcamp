@@ -37,22 +37,32 @@ export default function WelcomeScreen({ navigation }) {
             contentFit="contain"
           />
 
-          {/* No emoji badge */}
+          {/* Badge */}
           <View style={styles.badge}>
-            <Ionicons name="lock-closed" size={14} color="rgba(255,255,255,0.95)" />
-            <Text style={styles.badgeText}>No snooze</Text>
+            <Ionicons name="shield-checkmark" size={14} color="rgba(255,255,255,0.95)" />
+            <Text style={styles.badgeText}>Accountability platform</Text>
           </View>
 
           <Text style={styles.brand}>Edison</Text>
-          <Text style={styles.tagline}>Wake up. Prove it. Stay awake.</Text>
+          <Text style={styles.tagline}>Wake up. Prove it. Stay accountable.</Text>
           <Text style={styles.subtext}>You snooze, you lose.</Text>
+
+          {/* Discount info card */}
+          <View style={styles.discountCard}>
+            <Ionicons name="cash-outline" size={18} color="#46F2A2" />
+            <Text style={styles.discountText}>
+              Stay awake consistently → pay only{" "}
+              <Text style={styles.discountHighlight}>€0.99/mo</Text>{" "}
+              instead of €1.99
+            </Text>
+          </View>
         </View>
 
         {/* CTA */}
         <TouchableOpacity
           style={styles.cta}
           activeOpacity={0.9}
-          onPress={() => navigation.navigate("SetTime")}
+          onPress={() => navigation.navigate("RoleSelect")}
         >
           <LinearGradient
             colors={[theme.colors.accent2, theme.colors.accent]}
@@ -60,7 +70,7 @@ export default function WelcomeScreen({ navigation }) {
             end={{ x: 1, y: 0 }}
             style={styles.ctaGrad}
           >
-            <Text style={styles.ctaText}>Set up alarm</Text>
+            <Text style={styles.ctaText}>Get started</Text>
             <Ionicons name="arrow-forward" size={20} color={theme.colors.buttonTextDark} />
           </LinearGradient>
         </TouchableOpacity>
@@ -102,7 +112,7 @@ const styles = StyleSheet.create({
   },
 
   hero: { flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 10 },
-  eddy: { width: 200, height: 200, marginBottom: 20 },
+  eddy: { width: 180, height: 180, marginBottom: 16 },
 
   badge: {
     flexDirection: "row",
@@ -131,14 +141,40 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     fontWeight: "700",
     letterSpacing: 0.2,
+    textAlign: "center",
   },
 
   subtext: {
-    marginTop: 20,
+    marginTop: 12,
     fontSize: 14,
     color: theme.colors.textFaint,
     fontWeight: "800",
     fontStyle: "italic",
+  },
+
+  discountCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "rgba(70,242,162,0.10)",
+    borderWidth: 1,
+    borderColor: "rgba(70,242,162,0.25)",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    marginTop: 20,
+    marginHorizontal: 10,
+  },
+  discountText: {
+    color: "rgba(255,255,255,0.80)",
+    fontWeight: "700",
+    fontSize: 13,
+    flex: 1,
+    lineHeight: 19,
+  },
+  discountHighlight: {
+    color: "#46F2A2",
+    fontWeight: "900",
   },
 
   cta: { borderRadius: theme.radius.xl, overflow: "hidden", marginTop: 14 },
