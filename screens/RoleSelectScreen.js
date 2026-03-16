@@ -1,11 +1,12 @@
 // screens/RoleSelectScreen.js
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import ScreenShell from "../ui/ScreenShell";
 import GlassCard from "../ui/GlassCard";
 import { theme } from "../ui/theme";
+import { loadProfiles, loadUserProfile, updateProfile, updateUserProfile } from "../services/userProfileStorage";
 
 const ROLES = [
   {
@@ -66,8 +67,21 @@ const ROLES = [
   },
 ];
 
-export default function RoleSelectScreen({ navigation }) {
+export default function RoleSelectScreen({ navigation, route }) {
   const [selectedRole, setSelectedRole] = useState(null);
+  const { profileId, mode } = route.params || {};
+
+  useEffect(() => {
+    (async () => {
+      // Use the profileId from params if available, otherwise fallback to active
+      const profiles = await loadProfiles();
+      const profile = profiles.find(p => p.id === profileId) || await loadUserProfile();
+
+      if (profile?.userRole) {
+        setSelectedRole(profile.userRole);
+      }
+    })();
+  }, [profileId]);
 
   return (
     <ScreenShell variant="base">
@@ -79,7 +93,7 @@ export default function RoleSelectScreen({ navigation }) {
         >
           <Ionicons name="arrow-back" size={20} color={theme.colors.text} />
         </TouchableOpacity>
-        <Text style={styles.step}>Who are you?</Text>
+        <Text style={styles.step}>Step 1 of 5</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -120,9 +134,31 @@ export default function RoleSelectScreen({ navigation }) {
           activeOpacity={0.9}
           disabled={!selectedRole}
           style={[styles.cta, !selectedRole && { opacity: 0.45 }]}
-          onPress={() => {
-            if (!selectedRole) return;
-            navigation.navigate("SetTime", { userRole: selectedRole });
+          onPress={async () => {
+            console.log("[RoleSelect] Continue pressed", { selectedRole, routeParams: route?.params });
+            if (!selectedRole) {
+              console.log("[RoleSelect] Blocked: No role selected");
+              return;
+            }
+
+            try {
+              // Persist to the specific profile
+              if (profileId) {
+                await updateProfile(profileId, { userRole: selectedRole });
+              } else {
+                await updateUserProfile({ userRole: selectedRole });
+              }
+            } catch (err) {
+              console.warn("[RoleSelect] Continue failed", err);
+              // Continue anyway as per requirements
+            }
+
+            console.log("[RoleSelect] Navigating to SetTime");
+            navigation.navigate("SetTime", {
+              profileId,
+              mode,
+              userRole: selectedRole,
+            });
           }}
         >
           <Text style={styles.ctaText}>Continue</Text>

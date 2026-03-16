@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import ScreenShell from "../ui/ScreenShell";
 import GlassCard from "../ui/GlassCard";
 import { theme } from "../ui/theme";
+import { loadUserProfile, updateUserProfile } from "../services/userProfileStorage";
 
 export default function AlarmSetScreen({ navigation, route }) {
   const params = route.params || {};
@@ -18,8 +19,8 @@ export default function AlarmSetScreen({ navigation, route }) {
     proofMethod === "steps"
       ? "Walk steps"
       : proofMethod === "mental"
-      ? "Mental challenge"
-      : "Camera face check";
+        ? "Mental challenge"
+        : "Camera face check";
 
   const startAlarmCountdown = () => {
     setCountdownStarted(true);
@@ -31,24 +32,19 @@ export default function AlarmSetScreen({ navigation, route }) {
     const timer = setTimeout(() => {
       navigation.navigate("AlarmRinging", {
         ...params,
+        round: 1, // Start at round 1
         time: timeString,
         demoMode: true,
         intervalSeconds: 20,
         totalRounds: 3,
         demoRequiredSteps: [10, 6, 4],
+        isSetupPractice: true,
       });
     }, 2500);
 
     return () => clearTimeout(timer);
-  }, [countdownStarted]);
+  }, [countdownStarted, navigation, params, timeString]);
 
-  // Auto-start after a brief moment to let user see the summary
-  useEffect(() => {
-    const autoStart = setTimeout(() => {
-      setCountdownStarted(true);
-    }, 3000);
-    return () => clearTimeout(autoStart);
-  }, []);
 
   return (
     <ScreenShell variant="base">
@@ -96,7 +92,14 @@ export default function AlarmSetScreen({ navigation, route }) {
           <TouchableOpacity
             style={styles.startBtn}
             activeOpacity={0.9}
-            onPress={startAlarmCountdown}
+            onPress={() => {
+              if (typeof startAlarmCountdown === 'function') {
+                startAlarmCountdown();
+              } else {
+                console.warn("[AlarmSet] startAlarmCountdown is missing.");
+                setCountdownStarted(true); // Fallback behavior
+              }
+            }}
           >
             <Text style={styles.startBtnText}>Start now</Text>
             <Ionicons name="play" size={18} color={theme.colors.buttonTextDark} />

@@ -1,5 +1,6 @@
 // screens/ProofTaskScreen.js
 import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   View,
   Text,
@@ -22,7 +23,13 @@ import vibrationController from "../services/vibrationController";
 import ScreenShell from "../ui/ScreenShell";
 import GlassCard from "../ui/GlassCard";
 import { theme } from "../ui/theme";
-import { startRinging, stopRinging } from "../services/alarmEngine";
+import { loadUserProfile, updateUserProfile } from "../services/userProfileStorage";
+import {
+  scheduleAlarmNotification,
+  cancelAlarmNotification,
+  startTaskRinging,
+  stopRinging
+} from "../services/alarmEngine";
 import { setAlarmVolume } from "../services/soundManager";
 
 // ─────────────────────────────────────────────────────────────
@@ -511,40 +518,49 @@ export default function ProofTaskScreen({ navigation, route }) {
 
   const finishedRef = useRef(false);
 
-  const onComplete = useCallback(() => {
+  const onComplete = useCallback(async () => {
     if (finishedRef.current) return;
     finishedRef.current = true;
 
-    stopRinging();
-    Speech.stop();
-    vibrationController.stop();
+    // Standardize stopping the alarm
+    if (typeof stopRinging === "function") {
+      await stopRinging();
+    } else {
+      console.warn("[ProofTask] stopRinging is not available.");
+      vibrationController.stop();
+    }
 
+    Speech.stop();
+
+    // 3-Round Logic:
+    // If we are on round 1 or 2, go to RoundComplete.
+    // If we are on round 3 (or higher), go to Success.
     if (round >= 3) {
-      navigation.navigate("Success");
+      navigation.navigate("Success", { ...params });
     } else {
       navigation.navigate("RoundComplete", { ...params, round });
     }
   }, [round, params, navigation]);
 
+  // Audio management: Low volume on task focus, stop on blur
+  useFocusEffect(
+    useCallback(() => {
+      console.log("[AUDIO] ProofTask focused - starting low volume audio");
+      startTaskRinging({ musicGenre });
+
+      return () => {
+        console.log("[AUDIO] ProofTask blurred - stopping audio");
+        stopRinging();
+      };
+    }, [musicGenre])
+  );
+
   useEffect(() => {
-    // If we came from AlarmRinging (keepRinging=true), just duck the volume.
-    // Otherwise (debug/direct load), start ringing.
-    if (keepRinging) {
-      setAlarmVolume(0.1);
-    } else {
-      startRinging({ musicGenre });
-    }
-
-    vibrationController.startAlarm();
-
     return () => {
-      // Don't stop ringing on unmount!
-      // Only stop if onComplete triggers it.
-      // If we go back, volume should probably go back up, but AlarmRinging screen handles its own start.
       Speech.stop();
       vibrationController.stop();
     };
-  }, [musicGenre, keepRinging]);
+  }, []);
 
   if (proofMethod === "mental") {
     return <MentalChallenge round={round} onComplete={onComplete} />;

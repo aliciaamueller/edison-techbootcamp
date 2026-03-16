@@ -9,7 +9,7 @@ import ScreenShell from "../ui/ScreenShell";
 import GlassCard from "../ui/GlassCard";
 import { theme } from "../ui/theme";
 
-import { startRinging } from "../services/alarmEngine";
+import { startAlarmRinging, stopRinging } from "../services/alarmEngine";
 import { setAlarmVolume } from "../services/soundManager";
 
 const MESSAGE_TEMPLATES = {
@@ -69,10 +69,10 @@ export default function AlarmRingingScreen({ navigation, route }) {
           .sort((a, b) => {
             const aScore =
               (a.language || "").toLowerCase().startsWith("en-us") ? 3 : 0 +
-              (a.quality || "").toLowerCase() === "enhanced" ? 2 : 0;
+                (a.quality || "").toLowerCase() === "enhanced" ? 2 : 0;
             const bScore =
               (b.language || "").toLowerCase().startsWith("en-us") ? 3 : 0 +
-              (b.quality || "").toLowerCase() === "enhanced" ? 2 : 0;
+                (b.quality || "").toLowerCase() === "enhanced" ? 2 : 0;
             return bScore - aScore;
           })[0];
 
@@ -137,8 +137,8 @@ export default function AlarmRingingScreen({ navigation, route }) {
   useEffect(() => {
     isArmedRef.current = true;
 
-    startRinging({ musicGenre });
-    vibrationController.startAlarm();
+    // Use the loud alarm helper
+    startAlarmRinging({ musicGenre });
 
     Speech.stop();
     speakOnce();
@@ -151,7 +151,8 @@ export default function AlarmRingingScreen({ navigation, route }) {
       isArmedRef.current = false;
       if (loopTimerRef.current) clearInterval(loopTimerRef.current);
       Speech.stop();
-      vibrationController.stop();
+      // Ensure it stops ringing when leaving this screen
+      stopRinging();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [musicGenre, spokenMessage, englishVoice]);

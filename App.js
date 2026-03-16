@@ -12,6 +12,8 @@ import AlarmRingingScreen from "./screens/AlarmRingingScreen";
 import ProofTaskScreen from "./screens/ProofTaskScreen";
 import RoundCompleteScreen from "./screens/RoundCompleteScreen";
 import SuccessScreen from "./screens/SuccessScreen";
+import ProfileScreen from "./screens/ProfileScreen";
+import ProfileGateScreen from "./screens/ProfileGateScreen";
 
 import { addNotificationTapListener, initNotifications } from "./services/alarmEngine";
 
@@ -54,6 +56,8 @@ export default function App() {
         <Stack.Screen name="ProofTask" component={ProofTaskScreen} />
         <Stack.Screen name="RoundComplete" component={RoundCompleteScreen} />
         <Stack.Screen name="Success" component={SuccessScreen} />
+        <Stack.Screen name="Profile" component={ProfileScreen} />
+        <Stack.Screen name="ProfileGate" component={ProfileGateScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

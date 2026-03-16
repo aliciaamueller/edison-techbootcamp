@@ -1,5 +1,5 @@
 // screens/ReasonScreen.js
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import ScreenShell from "../ui/ScreenShell";
 import GlassCard from "../ui/GlassCard";
 import { theme } from "../ui/theme";
+import { loadProfiles, loadUserProfile, updateProfile, updateUserProfile } from "../services/userProfileStorage";
 
 // ─────────────────────────────────────────────────────────────
 // ROLE-BASED QUICK EXAMPLES (3 tailored examples per role)
@@ -71,6 +72,7 @@ function IconChip({ name }) {
 }
 
 export default function ReasonScreen({ navigation, route }) {
+  const { profileId, mode } = route.params || {};
   const [reason, setReason] = useState("");
   const [userName, setUserName] = useState("");
   const [selectedGenre, setSelectedGenre] = useState("energetic");
@@ -78,6 +80,31 @@ export default function ReasonScreen({ navigation, route }) {
   const [selectedIntervalMinutes, setSelectedIntervalMinutes] = useState(5);
   const [isCustomInterval, setIsCustomInterval] = useState(false);
   const [customIntervalInput, setCustomIntervalInput] = useState("5");
+
+  // Load existing data
+  useEffect(() => {
+    (async () => {
+      const profiles = await loadProfiles();
+      const profile = profiles.find(p => p.id === profileId) || await loadUserProfile();
+      if (profile) {
+        if (profile.userName) setUserName(profile.userName);
+        if (profile.reason) setReason(profile.reason);
+        if (profile.musicGenre) setSelectedGenre(profile.musicGenre);
+        if (profile.aiPersonality) setSelectedPersonality(profile.aiPersonality);
+        if (profile.intervalMinutes) {
+          const m = parseInt(profile.intervalMinutes, 10);
+          if ([3, 5, 10, 15].includes(m)) {
+            setSelectedIntervalMinutes(m);
+            setIsCustomInterval(false);
+          } else {
+            setSelectedIntervalMinutes(m);
+            setIsCustomInterval(true);
+            setCustomIntervalInput(String(m));
+          }
+        }
+      }
+    })();
+  }, [profileId]);
 
   const userRole = route.params?.userRole || "other";
   const examples = ROLE_EXAMPLES[userRole] || ROLE_EXAMPLES.other;
@@ -142,7 +169,7 @@ export default function ReasonScreen({ navigation, route }) {
           <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.8} style={styles.backBtn}>
             <Ionicons name="arrow-back" size={20} color={theme.colors.text} />
           </TouchableOpacity>
-          <Text style={styles.step}>Step 2 of 4</Text>
+          <Text style={styles.step}>Step 3 of 5</Text>
         </View>
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -302,18 +329,45 @@ export default function ReasonScreen({ navigation, route }) {
             activeOpacity={0.9}
             disabled={!canContinue}
             style={[styles.cta, !canContinue && { opacity: 0.55 }]}
-            onPress={() => {
+            onPress={async () => {
               if (!canContinue) return;
-              const intervalSeconds = getEffectiveIntervalMinutes() * 60;
-              navigation.navigate("ProofMethod", {
-                ...route.params,
-                userName: userName.trim(),
-                reason: reason.trim(),
-                musicGenre: selectedGenre,
-                aiPersonality: selectedPersonality,
-                intervalSeconds,
-                round: 1,
-              });
+              const intervalMinutes = getEffectiveIntervalMinutes();
+              const intervalSeconds = intervalMinutes * 60;
+
+              try {
+                console.log("[Reason] Next pressed", { userName, reason, selectedGenre, selectedPersonality, intervalMinutes });
+                // 1. Persist profile data
+                const patch = {
+                  userName: userName.trim(),
+                  reason: reason.trim(),
+                  musicGenre: selectedGenre,
+                  aiPersonality: selectedPersonality,
+                  intervalMinutes: intervalMinutes,
+                };
+                if (profileId) {
+                  await updateProfile(profileId, patch);
+                } else {
+                  await updateUserProfile(patch);
+                }
+
+                // 2. Navigate to ProofMethodScreen
+                console.log("[Reason] Navigating to ProofMethod");
+                navigation.navigate("ProofMethod", {
+                  ...route.params,
+                  ...patch,
+                  intervalSeconds,
+                  round: 1,
+                });
+              } catch (err) {
+                console.warn("[Reason] Next failed", err);
+                navigation.navigate("ProofMethod", {
+                  ...route.params,
+                  userName: userName.trim(),
+                  reason: reason.trim(),
+                  intervalSeconds,
+                  round: 1,
+                });
+              }
             }}
           >
             <Text style={styles.ctaText}>Next</Text>
@@ -321,7 +375,7 @@ export default function ReasonScreen({ navigation, route }) {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-    </ScreenShell>
+    </ScreenShell >
   );
 }
 

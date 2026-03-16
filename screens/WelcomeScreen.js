@@ -62,7 +62,7 @@ export default function WelcomeScreen({ navigation }) {
         <TouchableOpacity
           style={styles.cta}
           activeOpacity={0.9}
-          onPress={() => navigation.navigate("RoleSelect")}
+          onPress={() => navigation.navigate("ProfileGate")}
         >
           <LinearGradient
             colors={[theme.colors.accent2, theme.colors.accent]}
@@ -74,8 +74,18 @@ export default function WelcomeScreen({ navigation }) {
             <Ionicons name="arrow-forward" size={20} color={theme.colors.buttonTextDark} />
           </LinearGradient>
         </TouchableOpacity>
+
+        {/* Profile Button */}
+        <TouchableOpacity
+          onPress={() => navigation.navigate("ProfileGate")}
+          style={{ marginTop: 12, alignItems: 'center', padding: 10 }}
+        >
+          <Text style={{ color: theme.colors.textFaint, fontWeight: '700' }}>
+            Profile / Settings
+          </Text>
+        </TouchableOpacity>
       </View>
-    </ScreenShell>
+    </ScreenShell >
   );
 }
 

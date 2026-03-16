@@ -1,5 +1,5 @@
 // screens/SetTimeScreen.js
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
@@ -7,14 +7,30 @@ import { Ionicons } from "@expo/vector-icons";
 import ScreenShell from "../ui/ScreenShell";
 import GlassCard from "../ui/GlassCard";
 import { theme } from "../ui/theme";
+import { loadProfiles, loadUserProfile, updateProfile, updateUserProfile } from "../services/userProfileStorage";
 
 export default function SetTimeScreen({ navigation, route }) {
   const [time, setTime] = useState(new Date());
   const [showPicker, setShowPicker] = useState(false);
   const [selectedDays, setSelectedDays] = useState(["Mon", "Tue", "Wed", "Thu", "Fri"]);
 
-  const userRole = route.params?.userRole || "other";
+  const { profileId, mode } = route.params || {};
+  const isEditMode = mode === "edit";
+
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+  useEffect(() => {
+    (async () => {
+      // Load current profile to populate time/days
+      const profiles = await loadProfiles();
+      const profile = profiles.find(p => p.id === profileId) || await loadUserProfile();
+
+      if (profile) {
+        if (profile.wakeTimeMs) setTime(new Date(profile.wakeTimeMs));
+        if (profile.days) setSelectedDays(profile.days);
+      }
+    })();
+  }, [profileId]);
 
   const toggleDay = (day) => {
     if (selectedDays.includes(day)) setSelectedDays(selectedDays.filter((d) => d !== day));
@@ -34,7 +50,7 @@ export default function SetTimeScreen({ navigation, route }) {
         >
           <Ionicons name="arrow-back" size={20} color={theme.colors.text} />
         </TouchableOpacity>
-        <Text style={styles.step}>Step 1 of 4</Text>
+        <Text style={styles.step}>Step 2 of 5</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -81,19 +97,39 @@ export default function SetTimeScreen({ navigation, route }) {
         <TouchableOpacity
           style={styles.cta}
           activeOpacity={0.9}
-          onPress={() =>
-            navigation.navigate("Reason", {
-              time: formatTime(time),
-              days: selectedDays,
-              userRole,
-            })
-          }
+          onPress={async () => {
+            try {
+              console.log("[SetTime] Next pressed", { time: time.toISOString(), selectedDays });
+              // 1. Save time and days to profile
+              if (profileId) {
+                await updateProfile(profileId, { wakeTimeMs: time.getTime(), days: selectedDays });
+              } else {
+                await updateUserProfile({ wakeTimeMs: time.getTime(), days: selectedDays });
+              }
+
+              // 2. Navigate to next step (Reason)
+              console.log("[SetTime] Navigating to Reason");
+              navigation.navigate("Reason", {
+                ...route.params,
+                wakeTimeMs: time.getTime(),
+                days: selectedDays,
+              });
+            } catch (error) {
+              console.warn("[SetTime] Next failed", error);
+              // Continue anyway
+              navigation.navigate("Reason", {
+                ...route.params,
+                wakeTimeMs: time.getTime(),
+                days: selectedDays,
+              });
+            }
+          }}
         >
           <Text style={styles.ctaText}>Next</Text>
           <Text style={styles.ctaArrow}>→</Text>
         </TouchableOpacity>
       </ScrollView>
-    </ScreenShell>
+    </ScreenShell >
   );
 }
 

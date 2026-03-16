@@ -5,11 +5,21 @@ import { View, Text, StyleSheet } from "react-native";
 import ScreenShell from "../ui/ScreenShell";
 import GlassCard from "../ui/GlassCard";
 import { theme } from "../ui/theme";
+import { useFocusEffect } from "@react-navigation/native";
+import { stopRinging } from "../services/alarmEngine";
 
 export default function RoundCompleteScreen({ navigation, route }) {
   const { round = 1, intervalSeconds = 300 } = route.params || {};
   const [timeLeft, setTimeLeft] = useState(intervalSeconds);
   const timeLeftRef = useRef(intervalSeconds);
+
+  // Ensure silence during interval
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log("[AUDIO] RoundComplete focused - ensuring silence");
+      stopRinging();
+    }, [])
+  );
 
   const intervalLabel = intervalSeconds >= 60
     ? `${Math.round(intervalSeconds / 60)} minute${Math.round(intervalSeconds / 60) !== 1 ? "s" : ""}`
